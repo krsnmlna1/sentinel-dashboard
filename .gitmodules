@@ -1,0 +1,18 @@
+[submodule "sentinel-dao"]
+	path = sentinel-dao
+	url = https://github.com/krsnmlna1/sentinel-dao
+[submodule "sentinel-social"]
+	path = sentinel-social
+	url = https://github.com/krsnmlna1/sentinel-social
+[submodule "sentinel-profiler"]
+	path = sentinel-profiler
+	url = https://github.com/krsnmlna1/sentinel-profiler
+[submodule "sentinel-sniper"]
+	path = sentinel-sniper
+	url = https://github.com/krsnmlna1/sentinel-sniper
+[submodule "sentinel-auditor"]
+	path = sentinel-auditor
+	url = https://github.com/krsnmlna1/sentinel-auditor
+[submodule "sentinel-core"]
+	path = sentinel-core
+	url = https://github.com/krsnmlna1/sentinel-core
