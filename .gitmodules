@@ -16,3 +16,6 @@
 [submodule "sentinel-core"]
 	path = sentinel-core
 	url = https://github.com/krsnmlna1/sentinel-core
+[submodule "sentinel-scout"]
+	path = sentinel-scout
+	url = https://github.com/krsnmlna1/sentinel-scout.git
