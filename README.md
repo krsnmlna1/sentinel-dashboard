@@ -1,125 +1,109 @@
 # 🛡️ Sentinel Platform
 
-A unified blockchain monitoring, analysis, and trading intelligence platform combining DAO management, DeFi sniping, smart contract auditing, and cross-chain support.
+**AI-Powered Crypto Security & Wallet Profiler**
+
+Sentinel is a next-generation security command center for the crypto ecosystem. It combines real-time blockchain data with advanced AI agents to detect vulnerabilities, analyze wallet behaviors, and visualize on-chain activity.
+
+![Sentinel Dashboard](https://github.com/user-attachments/assets/placeholder-image-url)
+
+## 🚀 Key Features
+
+### 1. 🧠 AI Smart Contract Audit
+
+- **Instant Analysis**: Paste any contract address to get a security breakdown.
+- **Risk Scoring**: 0-100 safety score based on code patterns (Honeypot, Reentrancy, Ownership).
+- **Yield Prediction**: For DeFi vaults, AI predicts potential APY sustainability across different market conditions.
+
+### 2. 🤡 Wallet Profiler & Roast
+
+- **Behavioral Analysis**: Scans transaction history to profile a wallet (Whale, Degen, Bot, or Noob).
+- **Savage Mode**: Generates a "Roast" of the wallet's trading performance using AI.
+- **Viral Export**: One-click generation of shareable "Proof-of-Roast" images for Twitter/X.
+
+### 3. 📡 Scout Radar
+
+- **3D Visualization**: Real-time visualization of blockchain nodes and interactions.
+- **Visual Intelligence**: Identify clusters of suspicious activity or whale movements visually.
+
+### 4. 📄 Whitepaper Scanner
+
+- **PDF Analysis**: Upload project whitepapers to detect red flags, vague tokenomics, and unrealistic promises.
 
 ---
 
-## 📦 Core Components
+## 🏗️ Monorepo Architecture
 
-### 🎯 [Sentinel Core](https://github.com/krsnmlna1/sentinel-core)
-The foundational module providing core utilities, shared APIs, and common dependencies for the entire Sentinel ecosystem.
+This repository is a **Monorepo** containing the full stack of the Sentinel Platform.
 
-### 🏛️ [Sentinel DAO](https://github.com/krsnmlna1/sentinel-dao)
-Decentralized Autonomous Organization management dashboard. Enables governance, proposal voting, treasury management, and community participation.
-
-### ⚡ [Sentinel Sniper](https://github.com/krsnmlna1/sentinel-sniper)
-High-performance DeFi trading bot designed to identify and execute profitable swap opportunities across decentralized exchanges in real-time.
-
-### 🔥 [Sentinel Profiler](https://github.com/krsnmlna1/sentinel-profiler)
-Advanced Ethereum blockchain analysis tool providing real-time contract behavior profiling, gas optimization, and performance metrics.
-
-### 🔍 [Sentinel Auditor](https://github.com/krsnmlna1/sentinel-auditor)
-Comprehensive smart contract security auditor. Analyzes vulnerabilities, code patterns, and generates detailed audit reports.
-
-### 🌐 [Sentinel Social](https://github.com/krsnmlna1/sentinel-social)
-Cross-chain community engagement and support platform. Enables multi-chain notifications, user support, and social features across blockchain networks.
+- **`sentinel-dashboard/`** (Frontend)
+  - Built with [Next.js 14](https://nextjs.org/) (App Router).
+  - Handles UI, Wallet Connection, and Data Visualization.
+  - Deployed on Vercel/Netlify.
+- **`sentinel-workers/`** (Backend)
+  - Built with [Cloudflare Workers](https://workers.cloudflare.com/).
+  - Handles AI Inference (Llama 3 via Groq), Database (KV), and Blockchain Parsing.
+  - Deployed on Cloudflare Edge Network.
 
 ---
 
-## 🚀 Quick Start
+## 🛠️ Getting Started
 
-### Clone with Submodules
-```bash
-git clone --recurse-submodules https://github.com/krsnmlna1/Sentinel-Platform.git
-cd Sentinel-Platform
-```
+### Prerequisites
 
-### Update Submodules (if already cloned)
-```bash
-git submodule update --init --recursive
-```
+- Node.js 18+
+- NPM or Bun
 
-Each component has its own repository with dedicated documentation. Start with:
+### Installation
 
-1. **Sentinel Core** - Setup foundational services
-2. **Your specific use case** - DAO, Trading, Auditing, etc.
+1.  **Clone the repository**
 
-Refer to individual repository READMEs for detailed setup instructions.
+    ```bash
+    git clone https://github.com/krsnmlna1/sentinel-dashboard.git
+    cd sentinel-dashboard
+    ```
 
----
+2.  **Install Frontend Dependencies**
 
-## 🔗 Repository Structure
+    ```bash
+    cd sentinel-dashboard
+    npm install
+    ```
 
-```
-Sentinel-Platform/
-├── .gitmodules          # Git submodules configuration
-├── README.md            # This file
-├── sentinel-core/       # Core utilities & APIs
-├── sentinel-dao/        # DAO governance
-├── sentinel-sniper/     # DeFi trading bot
-├── sentinel-profiler/   # ETH analysis
-├── sentinel-auditor/    # Smart contract auditing
-└── sentinel-social/     # Cross-chain support
-```
+3.  **Run Development Server**
+
+    ```bash
+    npm run dev
+    ```
+
+4.  **Open in Browser**
+    Visit `http://localhost:3000`
 
 ---
 
-## 📋 Tech Stack
+## 🌍 Deployment Setup
 
-- **Language**: JavaScript/TypeScript, Python
-- **Blockchain**: Ethereum, Multiple EVM Chains, Solana
-- **Backend**: Node.js
-- **Frontend**: React/Next.js
-- **Smart Contracts**: Solidity
+### Frontend (Next.js)
+
+1. Go to `sentinel-dashboard/`.
+2. Run `npm run build`.
+3. Deploy the `.next` output or connect repository to Vercel (Root Directory: `sentinel-dashboard`).
+
+### Backend (Cloudflare)
+
+1. Go to `sentinel-workers/`.
+2. Configure `wrangler.toml` with your Cloudflare Account ID.
+3. Run `npx wrangler deploy`.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please refer to individual repository CONTRIBUTING guidelines.
+We welcome degens, security researchers, and whiteboard warriors.
 
-### Development Workflow
-
-1. **Clone the repository**:
-   ```bash
-   git clone --recurse-submodules https://github.com/krsnmlna1/Sentinel-Platform.git
-   ```
-
-2. **Make changes** in the respective submodule
-
-3. **Commit and push** changes:
-   ```bash
-   cd sentinel-core  # or whichever submodule you're working on
-   git add .
-   git commit -m "Your message"
-   git push origin main
-   ```
-
-4. **Update parent repository** with submodule reference:
-   ```bash
-   cd ..  # back to Sentinel-Platform root
-   git add sentinel-core  # or the updated submodule
-   git commit -m "Update sentinel-core submodule reference"
-   git push origin master
-   ```
-
-Or use the convenient flag:
-```bash
-git push --recurse-submodules=on-demand origin master
-```
+1. Fork the Project
+2. Create your Feature Branch
+3. Submit a Pull Request
 
 ---
 
-## 📄 License
-
-Each component maintains its own license. Check individual repositories for details.
-
----
-
-## 📧 Support
-
-For issues or questions specific to each component, visit its repository. For cross-platform concerns, open an issue here or contact the maintainers.
-
----
-
-**Last Updated**: January 15, 2026
+_Built with ❤️ (and paranoia) by the Sentinel Team._
