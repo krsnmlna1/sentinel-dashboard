@@ -21,6 +21,7 @@ export default function ShareCard({ children, title = "Sentinel Analysis", twitt
 
     try {
       const canvas = await html2canvas(cardRef.current, {
+        // @ts-ignore
         backgroundColor: "#030712", // sentinel-bg
         scale: 2, // Retina quality
         useCORS: true,
