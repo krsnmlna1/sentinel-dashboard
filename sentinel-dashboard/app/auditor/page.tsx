@@ -11,7 +11,7 @@ import WhitepaperCard from "@/components/audit/WhitepaperCard";
 
 interface AuditResult {
   success: boolean;
-  type?: 'contract' | 'wallet'; // Added type field
+  type?: 'contract' | 'wallet' | 'whitepaper'; // Added type field
   report?: string;
   analysis?: string;
   contractAddress?: string;
