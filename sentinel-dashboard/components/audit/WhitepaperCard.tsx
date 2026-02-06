@@ -1,6 +1,29 @@
 import ShareCard from "./ShareCard";
 
-// ... (keep interface & parsing)
+import { Share2, Download, Layer, Zap, TrendingUp, Layers, AlertTriangle, CheckCircle, Shield } from "lucide-react";
+
+interface WhitepaperData {
+  tokenomics?: {
+    token_name?: string;
+    token_type?: string;
+    total_supply?: string;
+    token_distribution?: Record<string, string>;
+    token_unlock_schedule?: Record<string, string>;
+  };
+  project_viability?: Record<string, string>;
+  red_flags?: Record<string, boolean>;
+  utility?: {
+    unique_value_proposition?: string;
+    use_cases?: string[];
+    partnerships?: string[];
+  };
+  analysis: string;
+}
+
+interface WhitepaperCardProps {
+  data: string | WhitepaperData;
+  fileName?: string;
+}
 
 export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) {
   const analysis: WhitepaperData = typeof data === 'string' ? JSON.parse(data) : data;
