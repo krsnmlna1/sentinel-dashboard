@@ -55,89 +55,28 @@ export async function POST(request: Request) {
     console.log('📄 Extracted text length:', extractedText.length);
 
     // 3. Send to AI for analysis
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-      throw new Error('GROQ_API_KEY not configured');
+    // 3. Send to Cloudflare Worker (Plan B Backend)
+    const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
+    
+    // We pass the extracted text as "contractAddress" because our worker expects that field for input
+    // This is a temporary workaround to avoid redeploying the worker code immediately
+    const workerResponse = await axios.post(workerUrl, {
+      contractAddress: extractedText, 
+      auditType: 'whitepaper'
+    });
+
+    if (!workerResponse.data.success) {
+      throw new Error(workerResponse.data.error || 'Worker failed to queue job');
     }
-    const prompt = `You are a blockchain security expert analyzing a cryptocurrency project whitepaper. Provide a comprehensive security and viability analysis.
 
-WHITEPAPER CONTENT:
-${cleanedText}
-
-Analyze the following aspects:
-
-1. **PROJECT OVERVIEW**
-   - Core value proposition
-   - Problem being solved
-   - Target market
-
-2. **TECHNICAL ANALYSIS**
-   - Technology stack
-   - Architecture soundness
-   - Scalability considerations
-   - Innovation level
-
-3. **TOKENOMICS**
-   - Token distribution
-   - Vesting schedules
-   - Utility and use cases
-   - Red flags in allocation
-
-4. **TEAM & ADVISORS**
-   - Team credentials (if mentioned)
-   - Advisor quality
-   - Transparency level
-
-5. **SECURITY CONCERNS**
-   - Audit mentions
-   - Security measures
-   - Potential vulnerabilities
-   - Centralization risks
-
-6. **RED FLAGS** 🚩
-   - Unrealistic promises
-   - Vague technical details
-   - Poor tokenomics
-   - Lack of transparency
-   - Plagiarism indicators
-
-7. **OVERALL RISK ASSESSMENT**
-   - Risk Score (0-100, where 100 is highest risk)
-   - Investment viability
-   - Key recommendations
-
-Provide a detailed, critical analysis. Be honest about red flags.`;
-
-    // Call Groq AI
-    const aiResponse = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${groqApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 60000 // 60 second timeout
-      }
-    );
-
-    const analysis = aiResponse.data.choices[0].message.content;
+    const { jobId } = workerResponse.data;
 
     return NextResponse.json({
       success: true,
+      jobId,
       fileName: file.name,
       fileSize: file.size,
-      analysis: analysis,
+      message: 'Analysis queued successfully',
       extractedLength: cleanedText.length,
       timestamp: new Date().toISOString()
     });

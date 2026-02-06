@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User } from "lucide-react";
 import AlphaCard from "@/components/audit/AlphaCard";
 import WalletProfileCard from "@/components/audit/WalletProfileCard";
 import { AlphaScore, YieldPrediction, VaultLinks } from "@/lib/auditUtils";
+import WhitepaperCard from "@/components/audit/WhitepaperCard";
 
 interface AuditResult {
   success: boolean;
@@ -44,15 +45,36 @@ interface AuditResult {
 
 export default function AuditorPage() {
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"contract" | "whitepaper">("contract");
+  const [mode, setMode] = useState<"contract" | "whitepaper" | "wallet">("contract");
   const [dragActive, setDragActive] = useState(false);
   const [contractAddress, setContractAddress] = useState("");
   const [chain, setChain] = useState("ethereum");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("INITIALIZING SCAN...");
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
 
-  // Pre-fill contract address from URL params
+  // Dynamic Loading Text
+  useEffect(() => {
+    if (!isLoading) return;
+    const stages = [
+      "CONNECTING TO NODE...",
+      "FETCHING ON-CHAIN DATA...",
+      "DECOMPILING BYTECODE...",
+      "RUNNING STATIC ANALYSIS...",
+      "SIMULATING ATTACK VECTORS...",
+      "GENERATING RISK REPORT..."
+    ];
+    let i = 0;
+    setLoadingText(stages[0]);
+    const interval = setInterval(() => {
+      i = (i + 1) % stages.length;
+      setLoadingText(stages[i]);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Pre-fill contract address from URL params (keep existing)
   useEffect(() => {
     const address = searchParams.get('address');
     const chainParam = searchParams.get('chain');
@@ -85,6 +107,12 @@ export default function AuditorPage() {
       border: "border-sentinel-blue",
       bg: "bg-sentinel-blue",
       gradient: "from-sentinel-blue"
+    },
+    wallet: {
+      primary: "text-sentinel-yellow",
+      border: "border-sentinel-yellow",
+      bg: "bg-sentinel-yellow",
+      gradient: "from-sentinel-yellow"
     }
   };
 
@@ -100,19 +128,58 @@ export default function AuditorPage() {
     setAuditResult(null);
 
     try {
-      const response = await fetch("/api/audit", {
+
+      const endpoint = mode === "wallet" ? "/api/audit/roast" : "/api/audit";
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+           // Roast API expects "address", Audit API expects "contractAddress"
+          address: contractAddress.trim(),
           contractAddress: contractAddress.trim(),
           chain
         })
       });
 
+      // If it's the standard audit, handle the new async flow
       const data = await response.json();
-      setAuditResult(data);
+      
+      if (mode === "contract") {
+         if (data.success && data.jobId) {
+            // Pass metadata for later use in polling callback
+            await pollAuditStatus(data.jobId, {
+               contractAddress: data.contractAddress,
+               chain: data.chain,
+               contractName: data.contractName,
+               contractType: data.contractType,
+               protocolData: data.protocolData
+            });
+         } else {
+            // Fallback for Errors
+            setAuditResult(data);
+            setIsLoading(false);
+         }
+      } else if (mode === "wallet") {
+          // NEW: Async Wallet Roast
+          if (data.success && data.jobId) {
+            await pollAuditStatus(data.jobId, {
+               type: 'wallet',
+               stats: data.stats,
+               address: data.address,
+               chain: data.chain
+            });
+          } else {
+             setAuditResult(data);
+             setIsLoading(false);
+          }
+      } else {
+          // Legacy handling
+          setAuditResult(data);
+          setIsLoading(false);
+      }
 
     } catch (error: any) {
       setAuditResult({
@@ -120,8 +187,127 @@ export default function AuditorPage() {
         error: error.message || "Failed to connect to audit service"
       });
     } finally {
-      setIsLoading(false);
+       // Loading handled in pollAuditStatus or explicit else blocks
     }
+  };
+
+  const pollAuditStatus = async (jobId: string, metadata?: any) => {
+    const workerUrl = `https://sentinel-api.krsnmlna1.workers.dev/api/audit/${jobId}`;
+    let attempts = 0;
+    const maxAttempts = 30; // 1 minute timeout (2s polling)
+
+    const poll = async () => {
+      try {
+        const res = await fetch(workerUrl);
+        const data = await res.json();
+
+        if (data.status === 'complete') {
+          // Worker uses "result" field for the output string/object
+          const rawResult = data.result;
+          
+          let analysisText = "";
+          let riskScore = 50;
+          let parsedJson: any = null;
+
+          // Try to parse JSON if it's a string (common for Roast)
+          if (typeof rawResult === 'string') {
+             try {
+                // valid json might be returned as string
+                parsedJson = JSON.parse(rawResult);
+             } catch (e) {
+                // not json, just text
+                analysisText = rawResult;
+             }
+          } else {
+             parsedJson = rawResult;
+          }
+
+          if (parsedJson && parsedJson.roast) {
+             // It's a Roast JSON!
+             analysisText = `## ${parsedJson.title}\n\n${parsedJson.roast}`;
+             riskScore = parsedJson.score || 50;
+          } else if (parsedJson && parsedJson.simulation) {
+             analysisText = parsedJson.message;
+          } else {
+             // Standard text report
+             analysisText = typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult);
+             // 1. Extract Risk Score (Client-side regex)
+             const riskScoreMatch = analysisText.match(/(?:risk score|score)[:\s]*(\d+)/i);
+             riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : 50;
+          }
+          
+          // 2. Calculate Alpha Score (if vault)
+          let alphaScore = null;
+          let yieldPrediction = null;
+          let vaultLinks = null;
+
+          if (metadata?.protocolData && metadata?.contractType === 'vault') {
+             alphaScore = calculateAlphaScore({
+                riskScore,
+                apy: metadata.protocolData.apy,
+                tvlChange7d: metadata.protocolData.change_7d,
+                hasWhales: false
+             });
+             
+             if (metadata.protocolData.apy > 0) {
+                yieldPrediction = calculateYield(1000, metadata.protocolData.apy);
+             }
+             
+             if (metadata.protocolData.slug) {
+                vaultLinks = generateVaultLinks(metadata.protocolData.slug);
+             }
+          }
+
+          setAuditResult({
+            success: true,
+            analysis: analysisText,
+            fileName: metadata?.fileName,
+            report: analysisText,
+            type: metadata?.type || (metadata?.fileName ? 'whitepaper' : 'contract'),
+            contractName: metadata?.contractName,
+            contractType: metadata?.contractType,
+            contractAddress: metadata?.contractAddress,
+            address: metadata?.address, // For wallet
+            chain: metadata?.chain,
+            riskScore,
+            alphaScore,
+            yieldPrediction,
+            vaultLinks,
+            protocolData: parsedJson || metadata?.protocolData,
+            stats: metadata?.stats
+          });
+          setIsLoading(false);
+        } else if (data.status === 'failed') {
+          setAuditResult({
+            success: false,
+            error: data.error || "Audit failed in background"
+          });
+          setIsLoading(false);
+        } else {
+          // Pending/Processing/Queued
+          attempts++;
+          if (attempts >= maxAttempts) {
+            setAuditResult({
+              success: false,
+              error: "Audit timed out. Please try again."
+            });
+            setIsLoading(false);
+          } else {
+            setTimeout(poll, 2000);
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+        if (attempts < maxAttempts) {
+             attempts++;
+             setTimeout(poll, 2000);
+        } else {
+            setIsLoading(false);
+            setAuditResult({ success: false, error: "Network error during polling" });
+        }
+      }
+    };
+    poll();
   };
 
   const handleWhitepaperUpload = async () => {
@@ -144,12 +330,9 @@ export default function AuditorPage() {
 
       const data = await response.json();
       
-      if (data.success) {
-        setAuditResult({
-          success: true,
-          analysis: data.analysis,
-          fileName: data.fileName
-        });
+      if (data.success && data.jobId) {
+        // Start polling with metadata
+        await pollAuditStatus(data.jobId, { fileName: data.fileName });
       } else {
         setAuditResult({
           success: false,
@@ -223,7 +406,7 @@ export default function AuditorPage() {
         <div className="bg-sentinel-card border border-white/10 rounded-full p-1 flex relative">
           <motion.div 
             className={`absolute top-1 bottom-1 w-[140px] rounded-full ${currentStyle.bg} opacity-10`}
-            animate={{ x: mode === "contract" ? 0 : 140 }}
+            animate={{ x: mode === "contract" ? 0 : mode === "wallet" ? 140 : 280 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
           <button 
@@ -237,7 +420,20 @@ export default function AuditorPage() {
             `}
           >
             <Code size={16} />
-            Smart Contract
+            Contract
+          </button>
+          <button 
+            onClick={() => {
+              setMode("wallet");
+              setAuditResult(null);
+            }}
+            className={`
+              relative z-10 w-[140px] py-2 rounded-full flex items-center justify-center gap-2 text-sm font-medium transition-colors
+              ${mode === "wallet" ? "text-white" : "text-gray-400 hover:text-white"}
+            `}
+          >
+            <User size={16} />
+            Wallet Roast
           </button>
           <button 
             onClick={() => {
@@ -267,7 +463,7 @@ export default function AuditorPage() {
           {/* Decorative Gradient Border */}
           <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${currentStyle.gradient} to-transparent opacity-50`} />
 
-          {mode === "contract" ? (
+          {mode === "contract" || mode === "wallet" ? (
             <div className="space-y-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-mono text-gray-400 uppercase ml-1">Contract Address</label>
@@ -320,10 +516,10 @@ export default function AuditorPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="animate-spin" size={18} />
-                        AUDITING...
+                        {loadingText}
                       </>
                     ) : (
-                      "AUDIT"
+                      mode === "wallet" ? "ROAST ME" : "AUDIT"
                     )}
                   </button>
                 </div>
@@ -368,6 +564,11 @@ export default function AuditorPage() {
                           stats={auditResult.stats}
                           graph={auditResult.graph}
                         />
+                      ) : mode === 'whitepaper' || auditResult.type === 'whitepaper' ? (
+                          <WhitepaperCard 
+                            data={auditResult.protocolData || auditResult.analysis || "{}"} 
+                            fileName={auditResult.fileName} 
+                          />
                       ) : (
                         <>
                           {/* ALPHA Score Card - Show first if available */}
@@ -513,25 +714,13 @@ export default function AuditorPage() {
                   className="mt-6"
                 >
                   {auditResult.success ? (
-                    <div className="bg-sentinel-bg/50 border border-white/10 rounded-xl p-6 space-y-4">
-                      <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                        <CheckCircle className="text-sentinel-green" size={24} />
-                        <div>
-                          <h3 className="text-white font-bold">Analysis Complete</h3>
-                          <p className="text-xs text-gray-400">{auditResult.fileName}</p>
-                        </div>
+                      <div className="bg-sentinel-bg/50 border border-white/10 rounded-xl p-6 space-y-4">
+                        {/* We use the same WhitepaperCard component above regardless of how it was triggered */}
+                         <WhitepaperCard 
+                            data={auditResult.protocolData || auditResult.analysis || "{}"} 
+                            fileName={auditResult.fileName} 
+                          />
                       </div>
-                      {/* Contract Report */}
-                      <div className="bg-white/5 rounded-xl p-6">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                          <Code size={20} />
-                          Security Analysis
-                        </h3>
-                        <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
-                          {auditResult.report || auditResult.analysis}
-                        </div>
-                      </div>
-                    </div>
                   ) : (
                     <div className="bg-sentinel-red/5 border border-sentinel-red/10 rounded-xl p-4 flex gap-4 items-start">
                       <XCircle className="text-sentinel-red shrink-0" size={24} />

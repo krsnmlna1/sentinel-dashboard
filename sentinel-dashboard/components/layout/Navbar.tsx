@@ -9,9 +9,9 @@ export function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "DASHBOARD", path: "/", icon: LayoutDashboard },
-    { name: "SCOUT", path: "/scout", icon: Radio },
+    { name: "DASHBOARD", path: "/dashboard", icon: LayoutDashboard },
     { name: "AUDITOR", path: "/auditor", icon: FileText },
+    { name: "AGENT", path: "/agent", icon: Activity },
     { name: "SETTINGS", path: "/settings", icon: Settings },
   ];
 

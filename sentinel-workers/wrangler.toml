@@ -1,0 +1,10 @@
+name = "sentinel-api"
+main = "src/worker.js"
+compatibility_date = "2025-02-01"
+
+# KV Namespace binding
+[[kv_namespaces]]
+binding = "AUDIT_KV"
+id = "b726fc633b34475ebf1888421a3ddcaf"
+
+# Queues removed for Plan B (No Credit Card required)

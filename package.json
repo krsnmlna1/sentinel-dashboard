@@ -1,0 +1,29 @@
+{
+  "name": "sentinel-platform",
+  "version": "1.0.0",
+  "description": "A unified blockchain monitoring, analysis, and trading intelligence platform combining DAO management, DeFi sniping, smart contract auditing, and cross-chain support.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sentinel:all": "concurrently \"npm run dev --prefix sentinel-dashboard\" \"npm run dev --prefix sentinel-dao\" \"npm start --prefix sentinel-profiler\" \"npm start --prefix sentinel-auditor\"",
+    "dashboard": "npm run dev --prefix sentinel-dashboard",
+    "dao": "npm run dev --prefix sentinel-dao",
+    "profiler": "npm start --prefix sentinel-profiler",
+    "auditor": "npm start --prefix sentinel-auditor"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krsnmlna1/Sentinel-Platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/krsnmlna1/Sentinel-Platform/issues"
+  },
+  "homepage": "https://github.com/krsnmlna1/Sentinel-Platform#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+
 
 // Config
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
 
-// OpenAI/OpenRouter Setup
-const openai = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY,
-    defaultHeaders: {
-        "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
-        "X-Title": "Sentinel Dashboard",
-    }
-});
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // Helper: Wei to ETH
 const toEth = (wei: string) => (parseFloat(wei) / 1e18).toFixed(5);
 
 export async function POST(req: Request) {
     try {
+        if (!GROQ_API_KEY) {
+            return NextResponse.json({ error: "Configuration Error: GROQ_API_KEY missing" }, { status: 500 });
+        }
+
         const body = await req.json();
         const { address } = body;
 
@@ -28,92 +24,124 @@ export async function POST(req: Request) {
 
         console.log(`🔥 Preparing the roast for: ${address}`);
 
-        // 1. Get Last 50 Transactions from Etherscan
-        const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
+        // 1. Get Balance & Last 50 Transactions
+        const [txRes, balRes] = await Promise.all([
+            fetch(`https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc&apikey=${ETHERSCAN_API_KEY}`),
+            fetch(`https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=${ETHERSCAN_API_KEY}`)
+        ]);
 
-        if (data.status !== "1" || !data.result) {
-             // Handle empty wallet or API error by returning a generic mock or error
-             console.warn("Etherscan fetch failed or empty:", data.message);
-             // If completely empty, maybe just roast them for being poor?
-             if(data.message === "No transactions found") {
+        const txData = await txRes.json();
+        const balData = await balRes.json();
+
+        if (txData.status !== "1" || !txData.result) {
+             console.warn("Etherscan fetch failed or empty.");
+             if(txData.message === "No transactions found") {
                 return NextResponse.json({
                     title: "The Ghost Town",
-                    roast: "This wallet is emptier than my soul. Do you even crypto, bro? 0 transactions. Are you saving up for gas fees on a testnet?",
-                    score: 10
+                    roast: "This wallet is emptier than my soul. 0 transactions.",
+                    score: 10,
+                    stats: {
+                        balance: "0.0000",
+                        txCount: 0,
+                        walletAge: 0,
+                        incomingTx: 0,
+                        outgoingTx: 0,
+                        contractInteractions: 0
+                    }
                 });
              }
-             throw new Error("Failed to fetch Etherscan data.");
         }
 
-        const txList = data.result;
+        const txList = Array.isArray(txData.result) ? txData.result : [];
+        const balanceWei = balData.result || "0";
+        const balanceEth = toEth(balanceWei);
 
-        // 2. Process Data (Simplify for AI)
+        // 2. Process Data
         let totalGasSpent = 0;
         let totalSent = 0;
         let totalReceived = 0;
+        let incomingTx = 0;
+        let outgoingTx = 0;
+        let contractInteractions = 0;
         
-        // Summarize text for prompt
+        let firstTs = Date.now();
+        
         const txSummary = txList.map((tx: any) => {
             const isOut = tx.from.toLowerCase() === address.toLowerCase();
             const valEth = parseFloat(toEth(tx.value));
             const gasEth = parseFloat(toEth((tx.gasUsed * tx.gasPrice).toString()));
             
             totalGasSpent += gasEth;
-            if (isOut) totalSent += valEth;
-            else totalReceived += valEth;
+            if (isOut) { totalSent += valEth; outgoingTx++; }
+            else { totalReceived += valEth; incomingTx++; }
 
-            return `- [${new Date(Number(tx.timeStamp) * 1000).toLocaleDateString()}] ${isOut ? 'SENT' : 'RECEIVED'} ${valEth} ETH (Gas: ${gasEth} ETH)`;
+            if (tx.input && tx.input !== '0x') contractInteractions++;
+
+            const ts = Number(tx.timeStamp) * 1000;
+            if (ts < firstTs) firstTs = ts;
+
+            return `- [${new Date(ts).toLocaleDateString()}] ${isOut ? 'SENT' : 'RECEIVED'} ${valEth} ETH (Gas: ${gasEth} ETH)`;
         }).join('\n');
 
         const netWorthFlow = totalReceived - totalSent;
+        const walletAgeDays = Math.floor((Date.now() - firstTs) / (1000 * 60 * 60 * 24));
 
-        // 3. Prompt AI
-        const prompt = `
-        ROLE: You are a RUTHLESS and CRUEL Crypto Stand-up Comedian.
-        TASK: Roast this wallet owner based on their transaction history.
-        
-        STATISTICS:
-        - Address: ${address}
-        - Total Transactions (checked): ${txList.length}
-        - Total Gas Fee Wasted: ${totalGasSpent.toFixed(4)} ETH (This is burnt money!)
-        - Net Flow (In - Out): ${netWorthFlow.toFixed(4)} ETH
-        
-        RECENT HISTORY:
-        ${txSummary}
+        // 3. Prepare Data for Worker
+        const walletData = {
+            balance: balanceEth,
+            txCount: txList.length,
+            walletAge: walletAgeDays,
+            totalGasSpent: totalGasSpent.toFixed(4),
+            netWorthFlow: netWorthFlow.toFixed(4),
+            txSummary: txSummary,
+            
+            // Raw stats for frontend display later
+            stats: {
+                balance: balanceEth,
+                txCount: txList.length,
+                walletAge: walletAgeDays,
+                incomingTx,
+                outgoingTx,
+                contractInteractions,
+                firstSeen: new Date(firstTs).toLocaleDateString()
+            }
+        };
 
-        INSTRUCTIONS:
-        1. Analyze their behavior. Are they a "Gas Donor"? "Exit Liquidity"? or "Degen"?
-        2. Give a insulting NICKNAME (Title). E.g. "Miner's Charity", "Bag Holder Supreme".
-        3. Use slang/informal English. Be funny but savage.
-        4. Focus on the financial stupidity.
+        // 4. Send to Cloudflare Worker
+        console.log("🔥 Code retrieved! Sending to Sentinel Worker for Roasting...");
         
-        FORMAT OUTPUT (JSON only):
-        {
-            "title": "SAVAGE TITLE",
-            "roast": "Long roast paragraph (min 3 sentences)...",
-            "score": "Stupidity Score (0-100, higher is dumber)"
-        }
-        `;
-
-        const completion = await openai.chat.completions.create({
-            model: "google/gemini-2.0-flash-exp:free", // Or use process.env.MODEL if preferred
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
+        const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
+        
+        const workerResponse = await fetch(workerUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contractAddress: address, // Using address as contractAddress for keying
+                auditType: 'roast',
+                walletData: walletData
+            })
         });
 
-        const rawContent = completion.choices[0].message.content || "{}";
-        // Clean potential generic thinking tokens if using deepseek or similar, though Gemini usually fine with json_object
-        const cleanContent = rawContent.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-        
-        const jsonResult = JSON.parse(cleanContent);
+        const workerData = await workerResponse.json();
 
-        return NextResponse.json(jsonResult);
+        if (!workerData.success) {
+             throw new Error(workerData.error || "Worker failed to accept job");
+        }
+
+        const { jobId } = workerData;
+        
+        return NextResponse.json({
+            success: true,
+            jobId,
+            type: 'wallet',
+            address,
+            chain: 'ethereum',
+            stats: walletData.stats 
+        });
 
     } catch (error: any) {
         console.error("Roast Error:", error);
         return NextResponse.json({ error: "Failed to roast: " + error.message }, { status: 500 });
     }
 }
+

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import axios from 'axios';
-import OpenAI from 'openai';
+// import OpenAI from 'openai';
 
 // --- CONFIG ---
 const RPC_URL = "https://rpc.flashbots.net"; // Fallback public RPC
@@ -63,43 +63,15 @@ export async function GET() {
         const totalTokenValue = tokenBalances.reduce((acc, t) => acc + t.value, 0);
         const totalValue = ethValue + totalTokenValue;
 
-        // 4. AI Analysis
-        let aiAnalysis = "AI Service Unavailable";
+        // 4. AI Analysis (Disabled to remove OpenAI dependency)
+        let aiAnalysis = "AI Analysis Temporarily Disabled (Migration in progress)";
+        /*
         const apiKey = process.env.OPENROUTER_API_KEY;
         
         if (apiKey) {
-            const openai = new OpenAI({
-                baseURL: "https://openrouter.ai/api/v1",
-                apiKey: apiKey,
-                defaultHeaders: { "HTTP-Referer": "http://localhost:3000", "X-Title": "DAO Sentinel" }
-            });
-
-            // Summary for AI
-            const holdingsSummary = tokenBalances
-                .filter(t => t.value > 100) // Filter dust
-                .map(t => `${t.symbol}: $${formatUSD(t.value)}`)
-                .join(', ');
-
-            const prompt = `
-            Analyze this DAO Treasury:
-            - Address: ${WALLET_ADDRESS}
-            - Total Value: ${formatUSD(totalValue)}
-            - ETH Holdings: ${balanceEth.toFixed(2)} ETH ($${formatUSD(ethValue)})
-            - Major Tokens: ${holdingsSummary}
-            
-            Risk assessment in 1 short, incisive sentence. Mention diversity or lack thereof.
-            `;
-
-            try {
-                const completion = await openai.chat.completions.create({
-                    messages: [{ role: "user", content: prompt }],
-                    model: "google/gemini-2.0-flash-exp:free", // Using free fast model
-                });
-                aiAnalysis = completion.choices[0].message.content || "No analysis";
-            } catch (e) {
-                console.error("AI Error", e);
-            }
+             // ... OpenAI logic removed to fix build ...
         }
+        */
 
         return NextResponse.json({
             address: WALLET_ADDRESS,

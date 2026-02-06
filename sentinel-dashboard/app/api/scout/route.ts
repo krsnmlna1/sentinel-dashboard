@@ -34,10 +34,16 @@ export async function GET(request: Request) {
     const response = await axios.get('https://api.llama.fi/protocols');
     const allProtocols = response.data;
     
-    // Filter candidates (TVL > 1M and 7d change < -10%)
-    const candidates = allProtocols.filter(
-      (p: any) => p.tvl > 1000000 && p.change_7d < -10
-    );
+    // Filter candidates (TVL > 1M)
+    // We want high drops, but if none, we still want to show meaningful protocols
+    let candidates = allProtocols.filter((p: any) => p.tvl > 1000000);
+    
+    // Sort by "Drop severity" (most negative change first) to find "Threats"
+    candidates.sort((a: any, b: any) => (a.change_7d || 0) - (b.change_7d || 0));
+    
+    // Take top 50 "Riskiest" (biggest drops) + some random large protocols if needed
+    // Actually, just taking the top 100 with lowest change_7d is good for "Scout" context
+    candidates = candidates.slice(0, 100);
 
     // Score and categorize
     const scoredCandidates = candidates.map((p: any) => {

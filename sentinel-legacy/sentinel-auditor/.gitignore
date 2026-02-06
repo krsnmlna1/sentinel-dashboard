@@ -1,0 +1,6 @@
+node_modules
+.env
+*.pdf
+package-lock.json
+debug_*.js
+check_models.js

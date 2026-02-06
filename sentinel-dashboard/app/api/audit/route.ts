@@ -100,185 +100,46 @@ export async function POST(request: NextRequest) {
     console.log(`📋 Contract Type Detected: ${contractType.toUpperCase()}`);
     console.log("🕵️  Code retrieved! Sending to AI Auditor...");
 
-    // 4. Create appropriate audit prompt based on type
-    const groqApiKey = process.env.GROQ_API_KEY;
+    // 4. Send to Cloudflare Worker for AI Audit
+    console.log("🕵️  Code retrieved! Sending to Sentinel Worker...");
     
-    if (!groqApiKey) {
-      throw new Error("GROQ_API_KEY not configured");
-    }
-
-    let prompt = '';
+    const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
     
-    if (contractType === 'token') {
-      prompt = `
-ROLE: You are a Token Security Auditor specializing in detecting scams and honeypots.
-
-TASK: Audit this ERC20 token contract. Focus on user safety and scam detection.
-
-ANALYZE:
-1. 🍯 HONEYPOT CHECK:
-   - Can users sell tokens?
-   - Are there blacklist functions?
-   - Hidden sell restrictions?
-
-2. 💸 TAX ANALYSIS:
-   - Buy tax percentage
-   - Sell tax percentage
-   - Max transaction limits
-
-3. 🔒 OWNERSHIP:
-   - Is ownership renounced?
-   - Can owner mint unlimited tokens?
-   - Can owner pause trading?
-
-4. 💧 LIQUIDITY:
-   - Is liquidity locked?
-   - Can owner remove liquidity?
-
-5. ⚖️ RISK SCORE (0-100):
-   - 0-30: Low risk (Safe)
-   - 31-70: Medium risk (Caution)
-   - 71-100: High risk (SCAM/HONEYPOT)
-
-OUTPUT FORMAT (Markdown):
-- Clear verdict at the top
-- Risk score with explanation
-- Specific vulnerabilities found
-- Recommendation: BUY/AVOID
-
-CODE:
-${cleanCode}
-      `;
-    } else if (contractType === 'vault') {
-      prompt = `
-ROLE: You are a DeFi Protocol Security Auditor specializing in vault/protocol safety.
-
-TASK: Audit this DeFi Vault/Protocol contract. Focus on rugpull capabilities and centralization risks.
-
-ANALYZE:
-1. 🚨 OWNERSHIP PRIVILEGES (CRITICAL):
-   - Can owner drain user funds via withdraw()?
-   - Can owner call emergencyWithdraw()?
-   - Can owner change fees to 100%?
-   - Is there a timelock on admin functions?
-
-2. ⚠️ UPGRADEABILITY RISK:
-   - Is this a Proxy Contract?
-   - Can implementation be changed?
-   - Who controls upgrades?
-   - Is there an upgrade delay?
-
-3. 🔗 DEPENDENCY ANALYSIS:
-   - Where does this vault deposit funds?
-   - Are dependencies verified/audited?
-   - Single point of failure risks?
-
-4. 🛑 EMERGENCY FUNCTIONS:
-   - pause() function exists?
-   - Who can call it?
-   - Can it be abused?
-
-5. ⚖️ RISK SCORE (0-100):
-   - 0-30: Low risk (Decentralized, Safe)
-   - 31-70: Medium risk (Some centralization)
-   - 71-100: High risk (RUGPULL CAPABLE)
-
-OUTPUT FORMAT (Markdown):
-- Security verdict at the top
-- Risk score with detailed explanation
-- Specific centralization risks
-- Recommendation: DEPOSIT/AVOID
-
-CODE:
-${cleanCode}
-      `;
-    } else {
-      // Generic audit for unknown types
-      prompt = `
-ROLE: You are a Smart Contract Security Auditor.
-
-TASK: Audit the Solidity code below. Look for critical security vulnerabilities.
-
-OUTPUT FORMAT (Markdown):
-1. 🐛 CRITICAL VULNERABILITIES
-2. 🍯 HONEYPOT CHECK
-3. ⚖️ RISK SCORE (0-100)
-4. 💡 RECOMMENDATION
-
-CODE:
-${cleanCode}
-      `;
-    }
-
-    const aiResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Send source code and metadata to worker
+    const workerResponse = await fetch(workerUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${groqApiKey}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000
-      }),
-      signal: AbortSignal.timeout(60000) // 1 minute timeout (Groq is fast!)
+        contractAddress,
+        auditType: contractType, // 'token', 'vault', or 'unknown'
+        sourceCode: cleanCode
+      })
     });
 
-    if (!aiResponse.ok) {
-      const errorData = await aiResponse.text();
-      throw new Error(`OpenRouter API Error: ${errorData}`);
+    const workerData = await workerResponse.json();
+
+    if (!workerData.success) {
+      throw new Error(workerData.error || "Worker failed to accept job");
     }
 
-    const aiData = await aiResponse.json();
-    const report = aiData.choices[0].message.content;
+    const { jobId } = workerData;
+    console.log(`✅ Audit Job Started: ${jobId}`);
 
-    // 5. Extract risk score from report (simple regex)
-    const riskScoreMatch = report.match(/(?:risk score|score)[:\s]*(\d+)/i);
-    const riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : 50;
-
-    // 6. Calculate ALPHA score if protocol data is provided
-    let alphaScore = null;
-    let yieldPrediction = null;
-    let vaultLinks = null;
-
-    if (protocolData && contractType === 'vault') {
-      // Calculate ALPHA score
-      alphaScore = calculateAlphaScore({
-        riskScore,
-        apy: protocolData.apy,
-        tvlChange7d: protocolData.change_7d,
-        hasWhales: false // Can be enhanced with whale detection
-      });
-
-      // Calculate yield predictions if APY is available
-      if (protocolData.apy && protocolData.apy > 0) {
-        yieldPrediction = calculateYield(1000, protocolData.apy);
-      }
-
-      // Generate vault links
-      if (protocolData.slug) {
-        vaultLinks = generateVaultLinks(protocolData.slug);
-      }
-    }
-
-    console.log("✅ Contract Audit Complete!");
-
+    // Return Job ID immediately for polling
     return NextResponse.json({
       success: true,
-      report,
+      jobId,
       contractAddress,
       chain,
       contractName: data.result[0].ContractName || "Unknown",
       contractType,
-      riskScore,
-      alphaScore,
-      yieldPrediction,
-      vaultLinks,
+      // Metadata to help frontend while waiting
       protocolData
     });
+
+
 
   } catch (error: any) {
     console.error("❌ Audit Error:", error.message);
