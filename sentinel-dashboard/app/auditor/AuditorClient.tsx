@@ -43,8 +43,24 @@ interface AuditResult {
   };
 }
 
-export default function AuditorPage() {
+// Separate component to handle search params
+function SearchParamsHandler({ 
+  onParamsReceived 
+}: { 
+  onParamsReceived: (address: string | null, chain: string | null) => void 
+}) {
   const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const address = searchParams.get('address');
+    const chainParam = searchParams.get('chain');
+    onParamsReceived(address, chainParam);
+  }, [searchParams, onParamsReceived]);
+  
+  return null;
+}
+
+export default function AuditorPage() {
   const [mode, setMode] = useState<"contract" | "whitepaper" | "wallet">("contract");
   const [dragActive, setDragActive] = useState(false);
   const [contractAddress, setContractAddress] = useState("");
@@ -74,11 +90,8 @@ export default function AuditorPage() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Pre-fill contract address from URL params (keep existing)
-  useEffect(() => {
-    const address = searchParams.get('address');
-    const chainParam = searchParams.get('chain');
-    
+  // Handler for search params
+  const handleSearchParams = (address: string | null, chainParam: string | null) => {
     if (address) {
       setContractAddress(address);
       setMode('contract');
@@ -93,7 +106,7 @@ export default function AuditorPage() {
     if (chainParam) {
       setChain(chainParam.toLowerCase());
     }
-  }, [searchParams]);
+  };
 
   const styles = {
     contract: {
@@ -388,6 +401,11 @@ export default function AuditorPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
+      {/* Handle URL search params */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler onParamsReceived={handleSearchParams} />
+      </Suspense>
+      
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
