@@ -1,6 +1,6 @@
 import ShareCard from "./ShareCard";
 
-import { Share2, Download, Layer, Zap, TrendingUp, Layers, AlertTriangle, CheckCircle, Shield } from "lucide-react";
+import { Share2, Download, Zap, TrendingUp, Layers, AlertTriangle, CheckCircle, Shield } from "lucide-react";
 
 interface WhitepaperData {
   tokenomics?: {
