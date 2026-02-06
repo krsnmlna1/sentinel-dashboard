@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User } from "lucide-react";
 import AlphaCard from "@/components/audit/AlphaCard";
 import WalletProfileCard from "@/components/audit/WalletProfileCard";
-import { AlphaScore, YieldPrediction, VaultLinks } from "@/lib/auditUtils";
+import { AlphaScore, YieldPrediction, VaultLinks, calculateAlphaScore, calculateYield, generateVaultLinks } from "@/lib/auditUtils";
 import WhitepaperCard from "@/components/audit/WhitepaperCard";
 
 interface AuditResult {
