@@ -564,7 +564,7 @@ export default function AuditorPage() {
                           stats={auditResult.stats}
                           graph={auditResult.graph}
                         />
-                      ) : mode === 'whitepaper' || (auditResult.type as string) === 'whitepaper' ? (
+                      ) : mode === 'whitepaper' || (auditResult as any).type === 'whitepaper' ? (
                           <WhitepaperCard 
                             data={auditResult.protocolData || auditResult.analysis || "{}"} 
                             fileName={auditResult.fileName} 
