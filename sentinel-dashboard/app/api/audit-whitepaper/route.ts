@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       fileName: file.name,
       fileSize: file.size,
       message: 'Analysis queued successfully',
-      extractedLength: cleanedText.length,
+      extractedLength: extractedText.length,
       timestamp: new Date().toISOString()
     });
 
