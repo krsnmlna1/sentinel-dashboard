@@ -45,8 +45,8 @@ export default {
 
         // Validate based on audit type
         if (body.auditType === 'whitepaper') {
-          if (!body.pdfData || !body.fileName) {
-            return new Response(JSON.stringify({ error: 'Missing pdfData or fileName for whitepaper audit' }), {
+          if (!body.whitepaperText) {
+            return new Response(JSON.stringify({ error: 'Missing whitepaperText for whitepaper audit' }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });

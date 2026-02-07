@@ -3,50 +3,32 @@ import axios from 'axios';
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const body = await request.json();
+    const { text, fileName } = body;
     
-    if (!file) {
+    if (!text) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
+        { success: false, error: 'No text provided' },
         { status: 400 }
       );
     }
 
-    // Check file type
-    if (file.type !== 'application/pdf') {
+    if (text.length < 100) {
       return NextResponse.json(
-        { success: false, error: 'Only PDF files are supported' },
+        { success: false, error: 'Extracted text is too short' },
         { status: 400 }
       );
     }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json(
-        { success: false, error: 'File size must be less than 10MB' },
-        { status: 400 }
-      );
-    }
+    console.log('📄 Received text length:', text.length, 'chars');
 
-    // Read file content
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Convert PDF to base64 for Cloudflare Worker
-    // Worker will handle PDF parsing to avoid native dependency issues in Vercel
-    const base64Pdf = buffer.toString('base64');
-    
-    console.log('📄 PDF size:', buffer.length, 'bytes');
-
-    // Send to Cloudflare Worker for PDF parsing and AI analysis
+    // Send to Cloudflare Worker for AI analysis
     const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
     
-    // Worker will parse the PDF and perform AI analysis
     const workerResponse = await axios.post(workerUrl, {
       auditType: 'whitepaper',
-      pdfData: base64Pdf,
-      fileName: file.name
+      whitepaperText: text.substring(0, 50000), // Limit to 50k chars for LLM
+      fileName: fileName || 'whitepaper.pdf'
     });
 
     if (!workerResponse.data.success) {
@@ -58,8 +40,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       jobId,
-      fileName: file.name,
-      fileSize: file.size,
+      fileName: fileName || 'whitepaper.pdf',
+      textLength: text.length,
       message: 'Analysis queued successfully',
       timestamp: new Date().toISOString()
     });
@@ -71,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `AI API Error: ${error.response.data?.error?.message || error.message}` 
+          error: `API Error: ${error.response.data?.error || error.message}` 
         },
         { status: 500 }
       );

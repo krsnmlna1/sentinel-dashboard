@@ -4,10 +4,16 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User } from "lucide-react";
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import AlphaCard from "@/components/audit/AlphaCard";
 import WalletProfileCard from "@/components/audit/WalletProfileCard";
 import { AlphaScore, YieldPrediction, VaultLinks, calculateAlphaScore, calculateYield, generateVaultLinks } from "@/lib/auditUtils";
 import WhitepaperCard from "@/components/audit/WhitepaperCard";
+
+// Set PDF.js worker path
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
 
 interface AuditResult {
   success: boolean;
@@ -333,18 +339,44 @@ export default function AuditorPage() {
     setAuditResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      // Step 1: Parse PDF client-side with PDF.js
+      setProgress("Extracting text from PDF...");
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const pdf = await getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = '';
+      const totalPages = pdf.numPages;
+      
+      for (let i = 1; i <= totalPages; i++) {
+        setProgress(`Reading page ${i}/${totalPages}...`);
+        
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += pageText + '\n\n';
+      }
 
+      console.log(`📄 Extracted ${fullText.length} characters from ${totalPages} pages`);
+
+      // Step 2: Send extracted text to API for AI analysis
+      setProgress("Analyzing whitepaper with AI...");
       const response = await fetch("/api/audit-whitepaper", {
         method: "POST",
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: fullText,
+          fileName: selectedFile.name
+        })
       });
 
       const data = await response.json();
       
       if (data.success && data.jobId) {
         // Start polling with metadata
+        setProgress("Waiting for AI analysis...");
         await pollAuditStatus(data.jobId, { fileName: data.fileName });
       } else {
         setAuditResult({
@@ -354,12 +386,14 @@ export default function AuditorPage() {
       }
 
     } catch (error: any) {
+      console.error('Whitepaper upload error:', error);
       setAuditResult({
         success: false,
-        error: error.message || "Failed to upload whitepaper"
+        error: error.message || "Failed to process whitepaper"
       });
     } finally {
       setIsLoading(false);
+      setProgress("");
     }
   };
 

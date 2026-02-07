@@ -1,45 +1,17 @@
 
 // queue-consumer.js - Background processor (Refactored for Plan B)
-import pdfParse from 'pdf-parse';
 
-// Parse PDF from base64 and extract text
-async function parseWhitepaper(pdfData) {
-  try {
-    // Convert base64 to buffer
-    const buffer = Buffer.from(pdfData, 'base64');
-    
-    // Parse PDF
-    const pdfResult = await pdfParse(buffer);
-    
-    // Extract and clean text
-    const extractedText = pdfResult.text
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 15000); // Limit to 15k chars for AI
-    
-    console.log(`📄 Extracted text length: ${extractedText.length} chars`);
-    
-    if (extractedText.length < 100) {
-      throw new Error('Could not extract meaningful text from PDF');
-    }
-    
-    return extractedText;
-  } catch (error) {
-    console.error('PDF parsing error:', error);
-    throw new Error(`Failed to parse PDF: ${error.message}`);
-  }
-}
 
 export async function processAuditJob(jobId, body, env) {
-  const { contractAddress, auditType, sourceCode, walletData, pdfData, fileName } = body;
+  const { contractAddress, auditType, sourceCode, walletData, whitepaperText, fileName } = body;
   
   try {
     let inputText = contractAddress; // Default for contract audits
     
-    // Handle whitepaper PDF parsing
-    if (auditType === 'whitepaper' && pdfData) {
-      console.log(`Parsing whitepaper PDF: ${fileName}`);
-      inputText = await parseWhitepaper(pdfData);
+    // Handle whitepaper text (already extracted client-side)
+    if (auditType === 'whitepaper' && whitepaperText) {
+      console.log(`Processing whitepaper: ${fileName || 'unknown'}`);
+      inputText = whitepaperText;
     }
     
     console.log(`Processing job ${jobId}: ${auditType}`);

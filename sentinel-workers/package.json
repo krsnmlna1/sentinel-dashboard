@@ -12,8 +12,5 @@
   "devDependencies": {
     "wrangler": "^3.0.0"
   },
-  "private": true,
-  "dependencies": {
-    "pdf-parse": "^2.4.5"
-  }
+  "private": true
 }
