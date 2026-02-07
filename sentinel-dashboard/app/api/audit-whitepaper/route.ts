@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import pdfParse from 'pdf-parse';
 
 export async function POST(request: Request) {
   try {
@@ -33,26 +34,21 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // For now, we'll use a simple text extraction
-    // In production, you'd want to use a proper PDF parser like pdf-parse
-    const textContent = buffer.toString('utf-8', 0, Math.min(buffer.length, 50000));
-    
-    // Clean the text
-    const cleanedText = textContent
-      .replace(/[^\x20-\x7E\n]/g, ' ')
+    // Use proper PDF parser
+    const pdfData = await pdfParse(buffer);
+    const extractedText = pdfData.text
       .replace(/\s+/g, ' ')
       .trim()
       .substring(0, 15000); // Limit to 15k chars for AI
 
-    if (cleanedText.length < 100) {
+    console.log('📄 Extracted text length:', extractedText.length);
+
+    if (extractedText.length < 100) {
       return NextResponse.json(
         { success: false, error: 'Could not extract meaningful text from PDF' },
         { status: 400 }
       );
     }
-
-    const extractedText = cleanedText;
-    console.log('📄 Extracted text length:', extractedText.length);
 
     // 3. Send to AI for analysis
     // 3. Send to Cloudflare Worker (Plan B Backend)
