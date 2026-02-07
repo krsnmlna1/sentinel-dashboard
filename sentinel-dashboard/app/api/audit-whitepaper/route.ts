@@ -33,34 +33,20 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Use proper PDF parser (namespace import to access all exports)
-    const pdfParseModule = await import('pdf-parse');
-    // @ts-ignore - pdf-parse has complex export structure
-    const pdfParse = pdfParseModule.default || pdfParseModule;
-    const pdfData = await pdfParse(buffer);
-    const extractedText = pdfData.text
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 15000); // Limit to 15k chars for AI
+    // Convert PDF to base64 for Cloudflare Worker
+    // Worker will handle PDF parsing to avoid native dependency issues in Vercel
+    const base64Pdf = buffer.toString('base64');
+    
+    console.log('📄 PDF size:', buffer.length, 'bytes');
 
-    console.log('📄 Extracted text length:', extractedText.length);
-
-    if (extractedText.length < 100) {
-      return NextResponse.json(
-        { success: false, error: 'Could not extract meaningful text from PDF' },
-        { status: 400 }
-      );
-    }
-
-    // 3. Send to AI for analysis
-    // 3. Send to Cloudflare Worker (Plan B Backend)
+    // Send to Cloudflare Worker for PDF parsing and AI analysis
     const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
     
-    // We pass the extracted text as "contractAddress" because our worker expects that field for input
-    // This is a temporary workaround to avoid redeploying the worker code immediately
+    // Worker will parse the PDF and perform AI analysis
     const workerResponse = await axios.post(workerUrl, {
-      contractAddress: extractedText, 
-      auditType: 'whitepaper'
+      auditType: 'whitepaper',
+      pdfData: base64Pdf,
+      fileName: file.name
     });
 
     if (!workerResponse.data.success) {
@@ -75,7 +61,6 @@ export async function POST(request: Request) {
       fileName: file.name,
       fileSize: file.size,
       message: 'Analysis queued successfully',
-      extractedLength: extractedText.length,
       timestamp: new Date().toISOString()
     });
 

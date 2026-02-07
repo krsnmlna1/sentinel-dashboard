@@ -36,11 +36,28 @@ export default {
         const body = await request.json();
         
         // Validate input
-        if (!body.contractAddress || !body.auditType) {
-          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        if (!body.auditType) {
+          return new Response(JSON.stringify({ error: 'Missing auditType' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
+        }
+
+        // Validate based on audit type
+        if (body.auditType === 'whitepaper') {
+          if (!body.pdfData || !body.fileName) {
+            return new Response(JSON.stringify({ error: 'Missing pdfData or fileName for whitepaper audit' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        } else {
+          if (!body.contractAddress) {
+            return new Response(JSON.stringify({ error: 'Missing contractAddress' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
         }
 
         const jobId = crypto.randomUUID();
