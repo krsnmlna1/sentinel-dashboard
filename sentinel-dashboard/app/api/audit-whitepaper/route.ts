@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
-import pdfParse from 'pdf-parse';
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +33,8 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Use proper PDF parser
+    // Use proper PDF parser (dynamic import for CommonJS module)
+    const pdfParse = (await import('pdf-parse')).default;
     const pdfData = await pdfParse(buffer);
     const extractedText = pdfData.text
       .replace(/\s+/g, ' ')
