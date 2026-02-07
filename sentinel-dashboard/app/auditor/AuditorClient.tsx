@@ -340,7 +340,7 @@ export default function AuditorPage() {
 
     try {
       // Step 1: Parse PDF client-side with PDF.js
-      setProgress("Extracting text from PDF...");
+      setLoadingText("Extracting text from PDF...");
       const arrayBuffer = await selectedFile.arrayBuffer();
       const pdf = await getDocument({ data: arrayBuffer }).promise;
       
@@ -348,7 +348,7 @@ export default function AuditorPage() {
       const totalPages = pdf.numPages;
       
       for (let i = 1; i <= totalPages; i++) {
-        setProgress(`Reading page ${i}/${totalPages}...`);
+        setLoadingText(`Reading page ${i}/${totalPages}...`);
         
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
@@ -362,7 +362,7 @@ export default function AuditorPage() {
       console.log(`📄 Extracted ${fullText.length} characters from ${totalPages} pages`);
 
       // Step 2: Send extracted text to API for AI analysis
-      setProgress("Analyzing whitepaper with AI...");
+      setLoadingText("Analyzing whitepaper with AI...");
       const response = await fetch("/api/audit-whitepaper", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
@@ -376,7 +376,7 @@ export default function AuditorPage() {
       
       if (data.success && data.jobId) {
         // Start polling with metadata
-        setProgress("Waiting for AI analysis...");
+        setLoadingText("Waiting for AI analysis...");
         await pollAuditStatus(data.jobId, { fileName: data.fileName });
       } else {
         setAuditResult({
@@ -393,7 +393,7 @@ export default function AuditorPage() {
       });
     } finally {
       setIsLoading(false);
-      setProgress("");
+      setLoadingText("INITIALIZING SCAN...");
     }
   };
 
