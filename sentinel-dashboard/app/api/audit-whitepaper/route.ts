@@ -33,8 +33,10 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Use proper PDF parser (Node.js specific export)
-    const { default: pdfParse } = await import('pdf-parse/node');
+    // Use proper PDF parser (namespace import to access all exports)
+    const pdfParseModule = await import('pdf-parse');
+    // @ts-ignore - pdf-parse has complex export structure
+    const pdfParse = pdfParseModule.default || pdfParseModule;
     const pdfData = await pdfParse(buffer);
     const extractedText = pdfData.text
       .replace(/\s+/g, ' ')
