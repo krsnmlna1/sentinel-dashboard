@@ -198,43 +198,77 @@ ${sourceCode}
   `;
 }
 
-async function performAudit(prompt, apiKey, env) {
-  // Use OpenRouter or Groq based on available env
-  const isGroq = !env.OPENROUTER_API_KEY && !!env.GROQ_API_KEY;
-  const url = isGroq 
-    ? 'https://api.groq.com/openai/v1/chat/completions'
-    : 'https://openrouter.ai/api/v1/chat/completions';
-    
-  // Use Llama 3 70b on Groq as it's reliable and fast
-  const model = isGroq ? 'llama-3.3-70b-versatile' : 'deepseek/deepseek-r1';
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      // OpenRouter specific headers
-      'HTTP-Referer': 'https://sentinel-platform.com',
-      'X-Title': 'Sentinel Auditor'
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { 
-          role: 'system', 
-          content: 'You are Sentinel AI, an elite smart contract auditor. detailed, cynical, and technical. Output MUST be valid JSON.' 
-        },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: "json_object" } // Force JSON if supported
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`AI API Failed: ${response.status} - ${err}`);
+// Retry utility with exponential backoff for rate limit handling
+async function retryWithBackoff(fn, maxRetries = 3) {
+  const delays = [5000, 10000, 20000]; // 5s, 10s, 20s
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      // Check if it's a rate limit error
+      const isRateLimit = error.message.includes('429') || 
+                         error.message.includes('rate_limit') ||
+                         error.message.includes('Rate limit');
+      
+      if (!isRateLimit || attempt === maxRetries) {
+        throw error; // Not a rate limit or final attempt, throw error
+      }
+      
+      // Extract wait time from error message if available
+      let waitTime = delays[attempt] || 20000;
+      const retryMatch = error.message.match(/try again in ([\d.]+)s/i);
+      if (retryMatch) {
+        waitTime = Math.ceil(parseFloat(retryMatch[1]) * 1000);
+      }
+      
+      console.log(`Rate limit hit. Retrying in ${waitTime/1000}s... (Attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
   }
+}
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+async function performAudit(prompt, apiKey, env) {
+  // Wrap the API call in retry logic
+  return await retryWithBackoff(async () => {
+    // Use OpenRouter or Groq based on available env
+    const isGroq = !env.OPENROUTER_API_KEY && !!env.GROQ_API_KEY;
+    const url = isGroq 
+      ? 'https://api.groq.com/openai/v1/chat/completions'
+      : 'https://openrouter.ai/api/v1/chat/completions';
+      
+    // Use Llama 3 70b on Groq as it's reliable and fast
+    const model = isGroq ? 'llama-3.3-70b-versatile' : 'deepseek/deepseek-r1';
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        // OpenRouter specific headers
+        'HTTP-Referer': 'https://sentinel-platform.com',
+        'X-Title': 'Sentinel Auditor'
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are Sentinel AI, an elite smart contract auditor. detailed, cynical, and technical. Output MUST be valid JSON.' 
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 2000, // Limit response to prevent TPM overshoot
+        response_format: { type: "json_object" } // Force JSON if supported
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`AI API Failed: ${response.status} - ${err}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  });
 }
