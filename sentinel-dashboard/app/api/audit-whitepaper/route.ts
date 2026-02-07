@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Use proper PDF parser (dynamic import for CommonJS module)
-    const pdfParse = await import('pdf-parse');
+    // Use proper PDF parser (Node.js specific export)
+    const { default: pdfParse } = await import('pdf-parse/node');
     const pdfData = await pdfParse(buffer);
     const extractedText = pdfData.text
       .replace(/\s+/g, ' ')
