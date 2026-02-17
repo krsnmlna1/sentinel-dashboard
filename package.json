@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "cd sentinel-dashboard && npm install && npm run build",
+    "build": "cd sentinel-dashboard && npm ci && npm run build",
     "start": "cd sentinel-dashboard && npm start",
+    "postinstall": "cd sentinel-dashboard && npm install",
     "sentinel:all": "concurrently \"npm run dev --prefix sentinel-dashboard\" \"npm run dev --prefix sentinel-dao\" \"npm start --prefix sentinel-profiler\" \"npm start --prefix sentinel-auditor\"",
     "dashboard": "npm run dev --prefix sentinel-dashboard",
     "dao": "npm run dev --prefix sentinel-dao",
