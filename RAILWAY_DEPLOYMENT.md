@@ -15,7 +15,7 @@ Before deploying to Railway, ensure you have:
 1. Log in to [Railway](https://railway.app)
 2. Click **"New Project"**
 3. Select **"Deploy from GitHub repo"**
-4. Choose the `krsnmlna1/sentinel-dashboard` repository
+4. Choose your forked repository (e.g., `your-username/sentinel-dashboard`)
 5. Railway will automatically detect the configuration
 
 ### Step 2: Set Environment Variables
