@@ -29,32 +29,43 @@ export default function NetworkGraph({ nodes, edges }: NetworkGraphProps) {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    // Determine positions manually to simulate a force layout
-    // Target in center (0,0)
-    const processedNodes = nodes.map((node, index) => {
-      if (node.type === 'target') {
-        return { ...node, x: 0, y: 0, color: '#d946ef' }; // Magenta
-      }
-      
-      // Contracts in inner ring
-      if (node.type === 'contract') {
-        const angle = (index * (360 / Math.max(1, nodes.length))) * (Math.PI / 180);
-        return { 
-          ...node, 
-          x: Math.cos(angle) * 50, 
-          y: Math.sin(angle) * 50,
-          color: '#8b5cf6' // Violet
-        }; 
-      }
+    // Separate nodes by type
+    const targetNode = nodes.find(n => n.type === 'target');
+    const contractNodes = nodes.filter(n => n.type === 'contract');
+    const walletNodes = nodes.filter(n => n.type === 'wallet');
 
-      // Wallets in outer ring
-      const angle = (index * (360 / Math.max(1, nodes.length))) * (Math.PI / 180) + 0.5;
-      return { 
-        ...node, 
-        x: Math.cos(angle) * 80, 
-        y: Math.sin(angle) * 80,
+    const processedNodes: any[] = [];
+
+    // 1. Target in center
+    if (targetNode) {
+      processedNodes.push({ 
+        ...targetNode, 
+        x: 0, 
+        y: 0, 
+        color: '#d946ef' // Magenta
+      });
+    }
+
+    // 2. Contracts in inner ring (radius 40)
+    contractNodes.forEach((node, index) => {
+      const angle = (index / contractNodes.length) * 2 * Math.PI;
+      processedNodes.push({
+        ...node,
+        x: Math.cos(angle) * 40,
+        y: Math.sin(angle) * 40,
+        color: '#8b5cf6' // Violet
+      });
+    });
+
+    // 3. Wallets in outer ring (radius 70)
+    walletNodes.forEach((node, index) => {
+      const angle = (index / walletNodes.length) * 2 * Math.PI + 0.3; // offset for better spacing
+      processedNodes.push({
+        ...node,
+        x: Math.cos(angle) * 70,
+        y: Math.sin(angle) * 70,
         color: '#06b6d4' // Cyan
-      };
+      });
     });
 
     setData(processedNodes);
@@ -66,6 +77,38 @@ export default function NetworkGraph({ nodes, edges }: NetworkGraphProps) {
         <div className="w-[300px] h-[300px] border border-white/20 rounded-full animate-pulse" />
         <div className="w-[150px] h-[150px] border border-white/20 rounded-full absolute" />
       </div>
+
+      {/* SVG Layer for Edges */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid meet" style={{ zIndex: 1 }}>
+        {edges.map((edge, idx) => {
+          const sourceNode = data.find((n: any) => n.id === edge.source);
+          const targetNode = data.find((n: any) => n.id === edge.target);
+          
+          if (!sourceNode || !targetNode) return null;
+
+          // Use the same coordinate system as the scatter chart
+          const x1 = sourceNode.x || 0;
+          const y1 = sourceNode.y || 0;
+          const x2 = targetNode.x || 0;
+          const y2 = targetNode.y || 0;
+
+          // Line thickness based on edge value (thicker = more interactions)
+          const strokeWidth = Math.max(0.5, Math.min(edge.value / 100, 2));
+
+          return (
+            <line
+              key={`edge-${idx}`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="rgba(14, 165, 233, 0.25)"
+              strokeWidth={strokeWidth}
+              className="transition-all"
+            />
+          );
+        })}
+      </svg>
 
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>

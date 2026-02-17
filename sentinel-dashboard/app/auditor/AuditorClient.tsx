@@ -3,11 +3,23 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User } from "lucide-react";
+import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User, TrendingUp } from "lucide-react";
 import AlphaCard from "@/components/audit/AlphaCard";
 import WalletProfileCard from "@/components/audit/WalletProfileCard";
 import { AlphaScore, YieldPrediction, VaultLinks, calculateAlphaScore, calculateYield, generateVaultLinks } from "@/lib/auditUtils";
 import WhitepaperCard from "@/components/audit/WhitepaperCard";
+import AnomalyDetectionPanel from "@/components/audit/AnomalyDetectionPanel";
+import MoneyFlowPanel from "@/components/audit/MoneyFlowPanel";
+import FlowTraceModal from "@/components/audit/FlowTraceModal";
+import type { AnomalyDetectionResult } from "@/lib/types/anomaly";
+import type { FlowResult } from "@/lib/types/flow";
+
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+
+// Set PDF.js worker path
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
 
 interface AuditResult {
   success: boolean;
@@ -69,6 +81,15 @@ export default function AuditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("INITIALIZING SCAN...");
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+  
+  // Anomaly Detection State
+  const [isAnomalyLoading, setIsAnomalyLoading] = useState(false);
+  const [anomalyResult, setAnomalyResult] = useState<AnomalyDetectionResult | null>(null);
+
+  // Money Flow State
+  const [showFlowModal, setShowFlowModal] = useState(false);
+  const [isFlowLoading, setIsFlowLoading] = useState(false);
+  const [flowResult, setFlowResult] = useState<FlowResult | null>(null);
 
   // Dynamic Loading Text
   useEffect(() => {
@@ -131,6 +152,78 @@ export default function AuditorPage() {
 
   const currentStyle = styles[mode];
 
+  // Refactored: Extract anomaly detection logic for reuse
+  const runAnomalyDetection = async (address: string, chainName: string) => {
+    setIsAnomalyLoading(true);
+    setAnomalyResult(null);
+
+    try {
+      const response = await fetch("/api/ai/anomaly-detection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: address.trim(),
+          chain: chainName
+        })
+      });
+
+      const data = await response.json();
+      setAnomalyResult(data);
+    } catch (error: any) {
+      setAnomalyResult({
+        success: false,
+        address: address,
+        chain: chainName,
+        anomalies: [],
+        overallRisk: 0,
+        aiInsight: "",
+        error: error.message || "Failed to detect anomalies"
+      });
+    } finally {
+      setIsAnomalyLoading(false);
+    }
+  };
+
+  const handleFlowTrace = async (destination: string, maxHops: number) => {
+    setIsFlowLoading(true);
+    setFlowResult(null);
+
+    try {
+      const response = await fetch("/api/trace/flow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: contractAddress.trim(),
+          to: destination,
+          chain,
+          maxHops
+        })
+      });
+
+      const data = await response.json();
+      setFlowResult(data);
+    } catch (error: any) {
+      setFlowResult({
+        success: false,
+        from: contractAddress,
+        to: destination,
+        chain,
+        paths: [],
+        totalAmount: 0,
+        found: false,
+        searchDepth: maxHops,
+        executionTime: 0,
+        error: error.message || "Failed to trace flow"
+      });
+    } finally {
+      setIsFlowLoading(false);
+    }
+  };
+
   const handleAudit = async () => {
     if (!contractAddress.trim()) {
       alert("Please enter a contract address");
@@ -139,6 +232,7 @@ export default function AuditorPage() {
 
     setIsLoading(true);
     setAuditResult(null);
+    setAnomalyResult(null); // Clear anomaly results when starting new audit
 
     try {
 
@@ -170,6 +264,10 @@ export default function AuditorPage() {
                contractType: data.contractType,
                protocolData: data.protocolData
             });
+            
+            // Auto-run anomaly detection after audit completes
+            console.log('🔍 Auto-running anomaly detection...');
+            await runAnomalyDetection(data.contractAddress, data.chain);
          } else {
             // Fallback for Errors
             setAuditResult(data);
@@ -184,6 +282,10 @@ export default function AuditorPage() {
                address: data.address,
                chain: data.chain
             });
+            
+            // Auto-run anomaly detection for wallets too
+            console.log('🔍 Auto-running anomaly detection for wallet...');
+            await runAnomalyDetection(data.address, data.chain);
           } else {
              setAuditResult(data);
              setIsLoading(false);
@@ -333,18 +435,44 @@ export default function AuditorPage() {
     setAuditResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      // Step 1: Parse PDF client-side with PDF.js
+      setLoadingText("Extracting text from PDF...");
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const pdf = await getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = '';
+      const totalPages = pdf.numPages;
+      
+      for (let i = 1; i <= totalPages; i++) {
+        setLoadingText(`Reading page ${i}/${totalPages}...`);
+        
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += pageText + '\n\n';
+      }
 
+      console.log(`📄 Extracted ${fullText.length} characters from ${totalPages} pages`);
+
+      // Step 2: Send extracted text to API for AI analysis
+      setLoadingText("Analyzing whitepaper with AI...");
       const response = await fetch("/api/audit-whitepaper", {
         method: "POST",
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: fullText,
+          fileName: selectedFile.name
+        })
       });
 
       const data = await response.json();
       
       if (data.success && data.jobId) {
         // Start polling with metadata
+        setLoadingText("Waiting for AI analysis...");
         await pollAuditStatus(data.jobId, { fileName: data.fileName });
       } else {
         setAuditResult({
@@ -354,12 +482,14 @@ export default function AuditorPage() {
       }
 
     } catch (error: any) {
+      console.error('Whitepaper upload error:', error);
       setAuditResult({
         success: false,
-        error: error.message || "Failed to upload whitepaper"
+        error: error.message || "Failed to process whitepaper"
       });
     } finally {
       setIsLoading(false);
+      setLoadingText("INITIALIZING SCAN...");
     }
   };
 
@@ -562,6 +692,43 @@ export default function AuditorPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Anomaly Detection Results */}
+              {(anomalyResult || isAnomalyLoading) && (
+                <AnomalyDetectionPanel 
+                  result={anomalyResult} 
+                  isLoading={isAnomalyLoading} 
+                />
+              )}
+
+              {/* Money Flow Tracking */}
+              {auditResult && auditResult.success && (
+                <button
+                  onClick={() => setShowFlowModal(true)}
+                  disabled={isFlowLoading}
+                  className="w-full py-3 bg-sentinel-blue/10 hover:bg-sentinel-blue/20 border border-sentinel-blue/30 text-sentinel-blue font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <TrendingUp size={18} />
+                  TRACE FUNDS
+                </button>
+              )}
+
+              {/* Flow Trace Results */}
+              {(flowResult || isFlowLoading) && (
+                <MoneyFlowPanel
+                  result={flowResult}
+                  isLoading={isFlowLoading}
+                />
+              )}
+
+              {/* Flow Trace Modal */}
+              <FlowTraceModal
+                isOpen={showFlowModal}
+                onClose={() => setShowFlowModal(false)}
+                onTrace={handleFlowTrace}
+                sourceAddress={contractAddress}
+                chain={chain}
+              />
 
               {/* Results */}
               {auditResult && (

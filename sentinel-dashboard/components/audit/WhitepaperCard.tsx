@@ -53,30 +53,30 @@ export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) 
        twitterText={`Just analyzed ${fileName || 'a project'} whitepaper with Sentinel AI. Here's the risk breakdown! 📄 #SentinelAI #DYOR`}
     >
       <div className="space-y-6">
-        {/* ... (keep existing content intact) */}
-        
         {/* Header */}
-        <div className="bg-sentinel-bg/50 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between">
-           {/* ... */}
-           {/* Basically I just want to wrap the outer div with <ShareCard> and the inner div with a class or just pass children */}
+        <div className="bg-sentinel-bg/50 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-sentinel-blue/20 flex items-center justify-center text-sentinel-blue">
+              <div className="w-12 h-12 rounded-full bg-sentinel-blue/20 flex items-center justify-center text-sentinel-blue shrink-0">
                  <Shield size={24} />
               </div>
-              <div>
+              <div className="overflow-hidden">
                  <h3 className="text-lg font-bold text-white">Whitepaper Analysis</h3>
-                 <p className="text-sm text-gray-400">{fileName || analysis.tokenomics?.token_name || 'Project Audit'}</p>
+                 <p className="text-sm text-gray-400 truncate max-w-[300px]" title={fileName}>
+                    {fileName ? fileName.split('/').pop() : 'Project Audit'}
+                 </p>
               </div>
            </div>
            
-           <div className="flex gap-2">
-              <div className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center">
+           <div className="flex flex-wrap gap-2 justify-end">
+              <div className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center min-w-[100px]">
                  <div className="text-xs text-gray-400 uppercase mb-1">Type</div>
                  <div className="text-sm font-bold text-white">{analysis.tokenomics?.token_type || 'N/A'}</div>
               </div>
-              <div className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center">
+              <div className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center max-w-[200px]">
                  <div className="text-xs text-gray-400 uppercase mb-1">Supply</div>
-                 <div className="text-sm font-bold text-white">{analysis.tokenomics?.total_supply || 'N/A'}</div>
+                 <div className="text-sm font-bold text-white truncate" title={analysis.tokenomics?.total_supply}>
+                    {analysis.tokenomics?.total_supply || 'N/A'}
+                 </div>
               </div>
            </div>
         </div>
@@ -87,25 +87,27 @@ export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) 
               <h4 className="text-sentinel-blue font-bold mb-4 flex items-center gap-2">
                  <Layers size={18} /> Tokenomics
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-6">
                  <div>
-                    <div className="text-xs text-gray-400 mb-2">Distribution</div>
-                    <div className="space-y-2">
+                    <div className="text-xs text-gray-400 mb-3 border-b border-white/10 pb-1">DISTRIBUTION</div>
+                    <div className="space-y-3">
                        {Object.entries(analysis.tokenomics?.token_distribution || {}).map(([key, value]) => (
-                          <div key={key} className="flex justify-between text-sm">
-                             <span className="text-gray-300 capitalize">{key.replace(/_/g, ' ')}</span>
-                             <span className="font-mono text-white">{value}</span>
+                          <div key={key} className="flex flex-col gap-1">
+                             <div className="flex justify-between items-baseline">
+                                <span className="text-sm text-gray-300 font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+                             </div>
+                             <span className="text-sm text-white/80 bg-white/5 p-2 rounded border border-white/5">{value}</span>
                           </div>
                        ))}
                     </div>
                  </div>
-                 <div className="pt-4 border-t border-white/10">
-                    <div className="text-xs text-gray-400 mb-2">Unlock Schedule</div>
-                    <div className="space-y-2">
+                 <div>
+                    <div className="text-xs text-gray-400 mb-3 border-b border-white/10 pb-1">UNLOCK SCHEDULE</div>
+                    <div className="space-y-3">
                        {Object.entries(analysis.tokenomics?.token_unlock_schedule || {}).map(([key, value]) => (
-                          <div key={key} className="flex justify-between text-sm">
-                             <span className="text-gray-300 capitalize">{key.replace(/_/g, ' ')}</span>
-                             <span className="text-gray-400 text-xs text-right max-w-[50%]">{value}</span>
+                          <div key={key} className="flex flex-col gap-1">
+                             <span className="text-sm text-gray-300 font-medium capitalize">{key.replace(/_/g, ' ')}</span>
+                             <span className="text-xs text-gray-400">{value}</span>
                           </div>
                        ))}
                     </div>
@@ -120,7 +122,7 @@ export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) 
               </h4>
               <div className="space-y-4">
                  {Object.entries(analysis.project_viability || {}).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between">
+                    <div key={key} className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors">
                        <span className="text-sm text-gray-300 capitalize">{key.replace(/_/g, ' ')}</span>
                        <span className={`text-sm font-bold capitalize ${getViabilityColor(value)}`}>{value}</span>
                     </div>
@@ -150,16 +152,23 @@ export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) 
            <h4 className="text-sentinel-yellow font-bold mb-4 flex items-center gap-2">
               <Zap size={18} /> Utility & Ecosystem
            </h4>
-           <p className="text-sm text-gray-300 mb-6 italic border-l-2 border-sentinel-yellow pl-4">
-              "{analysis.utility?.unique_value_proposition}"
-           </p>
+           <div className="mb-6 p-4 bg-sentinel-yellow/5 border border-sentinel-yellow/20 rounded-lg">
+              <p className="text-sm text-gray-300 italic">
+                 "{analysis.utility?.unique_value_proposition || "No unique value proposition identified."}"
+              </p>
+           </div>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                  <div className="text-xs text-gray-400 mb-2 uppercase">Use Cases</div>
                  <div className="flex flex-wrap gap-2">
-                    {analysis.utility?.use_cases?.map((useCase) => (
-                       <span key={useCase} className="px-3 py-1 bg-white/10 rounded-full text-xs text-white">
+                    {(Array.isArray(analysis.utility?.use_cases) 
+                       ? analysis.utility.use_cases 
+                       : typeof analysis.utility?.use_cases === 'string' 
+                          ? [(analysis.utility.use_cases as string)] 
+                          : []
+                    ).map((useCase, idx) => (
+                       <span key={idx} className="px-3 py-1 bg-white/10 rounded-full text-xs text-white">
                           {useCase}
                        </span>
                     ))}
@@ -168,8 +177,13 @@ export default function WhitepaperCard({ data, fileName }: WhitepaperCardProps) 
               <div>
                  <div className="text-xs text-gray-400 mb-2 uppercase">Partnerships</div>
                  <div className="flex flex-wrap gap-2">
-                    {analysis.utility?.partnerships?.map((partner) => (
-                       <span key={partner} className="px-3 py-1 bg-sentinel-blue/10 text-sentinel-blue border border-sentinel-blue/20 rounded-full text-xs">
+                    {(Array.isArray(analysis.utility?.partnerships)
+                       ? analysis.utility.partnerships
+                       : typeof analysis.utility?.partnerships === 'string'
+                          ? [(analysis.utility.partnerships as string)]
+                          : []
+                    ).map((partner, idx) => (
+                       <span key={idx} className="px-3 py-1 bg-sentinel-blue/10 text-sentinel-blue border border-sentinel-blue/20 rounded-full text-xs">
                           {partner}
                        </span>
                     ))}

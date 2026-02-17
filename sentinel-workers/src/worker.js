@@ -36,8 +36,15 @@ export default {
         const body = await request.json();
         
         // Validate input
-        if (!body.contractAddress || !body.auditType) {
-          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        if (body.auditType === 'whitepaper') {
+           if (!body.whitepaperText) {
+             return new Response(JSON.stringify({ error: 'Missing whitepaperText' }), {
+               status: 400,
+               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+             });
+           }
+        } else if (!body.contractAddress) {
+          return new Response(JSON.stringify({ error: 'Missing contractAddress' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
