@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, FileText, Code, Upload, AlertTriangle, Search, Loader2, CheckCircle, XCircle, ExternalLink, User, TrendingUp } from "lucide-react";
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import AlphaCard from "@/components/audit/AlphaCard";
 import WalletProfileCard from "@/components/audit/WalletProfileCard";
 import { AlphaScore, YieldPrediction, VaultLinks, calculateAlphaScore, calculateYield, generateVaultLinks } from "@/lib/auditUtils";
@@ -13,8 +14,6 @@ import MoneyFlowPanel from "@/components/audit/MoneyFlowPanel";
 import FlowTraceModal from "@/components/audit/FlowTraceModal";
 import type { AnomalyDetectionResult } from "@/lib/types/anomaly";
 import type { FlowResult } from "@/lib/types/flow";
-
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 
 // Set PDF.js worker path
 if (typeof window !== 'undefined') {

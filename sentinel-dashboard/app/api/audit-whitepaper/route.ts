@@ -3,25 +3,32 @@ import axios from 'axios';
 
 export async function POST(request: Request) {
   try {
-
-    const { text, fileName } = await request.json();
+    const body = await request.json();
+    const { text, fileName } = body;
     
-    if (!text || text.length < 100) {
+    if (!text) {
       return NextResponse.json(
-        { success: false, error: 'Could not extract meaningful text from PDF' },
+        { success: false, error: 'No text provided' },
         { status: 400 }
       );
     }
 
-    console.log('📄 Received text length:', text.length);
+    if (text.length < 100) {
+      return NextResponse.json(
+        { success: false, error: 'Extracted text is too short' },
+        { status: 400 }
+      );
+    }
+
+    console.log('📄 Received text length:', text.length, 'chars');
 
     // Send to Cloudflare Worker for AI analysis
     const workerUrl = 'https://sentinel-api.krsnmlna1.workers.dev/api/audit';
     
     const workerResponse = await axios.post(workerUrl, {
       auditType: 'whitepaper',
-      whitepaperText: text, // Worker now accepts this field
-      fileName: fileName
+      whitepaperText: text.substring(0, 50000), // Limit to 50k chars for LLM
+      fileName: fileName || 'whitepaper.pdf'
     });
 
     if (!workerResponse.data.success) {
@@ -33,9 +40,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       jobId,
-      fileName: fileName,
-      message: 'Analysis queued successfully',
+      fileName: fileName || 'whitepaper.pdf',
       textLength: text.length,
+      message: 'Analysis queued successfully',
       timestamp: new Date().toISOString()
     });
 

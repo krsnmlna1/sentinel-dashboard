@@ -1,18 +1,28 @@
 
 // queue-consumer.js - Background processor (Refactored for Plan B)
 
+
 export async function processAuditJob(jobId, body, env) {
-  const { contractAddress, auditType, sourceCode, walletData, whitepaperText } = body;
+  const { contractAddress, auditType, sourceCode, walletData, whitepaperText, fileName } = body;
   
   try {
-    const targetName = auditType === 'whitepaper' ? 'Whitepaper' : contractAddress;
-    console.log(`Processing job ${jobId}: ${auditType} for ${targetName}`);
+    let inputText = contractAddress; // Default for contract audits
+    
+    // Handle whitepaper text (already extracted client-side)
+    if (auditType === 'whitepaper' && whitepaperText) {
+      console.log(`Processing whitepaper: ${fileName || 'unknown'}`);
+      inputText = whitepaperText;
+    }
+    
+    console.log(`Processing job ${jobId}: ${auditType}`);
 
     // Update status to processing
     await env.AUDIT_KV.put(jobId, JSON.stringify({
       status: 'processing',
       progress: 10,
-      message: auditType === 'roast' ? 'Roasting wallet history...' : 'AI Agent is analyzing the contract...',
+      message: auditType === 'roast' ? 'Roasting wallet history...' : 
+               auditType === 'whitepaper' ? 'Analyzing whitepaper...' :
+               'AI Agent is analyzing the contract...',
       updatedAt: Date.now()
     }));
     
@@ -32,8 +42,7 @@ export async function processAuditJob(jobId, body, env) {
     }
 
     // Determine prompt based on type
-    const contentToAnalyze = auditType === 'whitepaper' ? whitepaperText : contractAddress;
-    const prompt = generatePrompt(auditType, contentToAnalyze, sourceCode, walletData);
+    const prompt = generatePrompt(auditType, inputText, sourceCode, walletData);
     
     // Call AI API
     const auditResult = await performAudit(prompt, apiKey, env);
@@ -62,42 +71,7 @@ export async function processAuditJob(jobId, body, env) {
 
 function generatePrompt(type, address, sourceCode, walletData) {
   if (type === 'whitepaper') {
-    return `
-    ROLE: You are a Tier 1 Crypto Whitepaper Auditor.
-    TASK: Analyze the text below and extract key project details into JSON format.
-    
-    WHITEPAPER TEXT:
-    "${address.substring(0, 30000)}..."
-
-    OUTPUT FORMAT (Strict JSON):
-    {
-      "tokenomics": {
-        "token_name": "Project Name/Token Symbol",
-        "token_type": "e.g. ERC20, SPL, etc.",
-        "total_supply": "e.g. 1,000,000,000",
-        "token_distribution": { "Category": "Percentage" },
-        "token_unlock_schedule": { "Event": "Unlock Details" }
-      },
-      "project_viability": {
-        "market_potential": "Strong/Moderate/Weak",
-        "technical_innovation": "Strong/Moderate/Weak",
-        "community_strength": "Strong/Moderate/Weak",
-        "roadmap_feasibility": "Strong/Moderate/Weak"
-      },
-      "red_flags": {
-        "centralized_supply": boolean,
-        "anonymous_team": boolean,
-        "unrealistic_returns": boolean,
-        "lack_of_audit": boolean
-      },
-      "utility": {
-        "unique_value_proposition": "Brief summary of unique value",
-        "use_cases": ["Case 1", "Case 2", "Case 3"],
-        "partnerships": ["Partner 1", "Partner 2"]
-      },
-      "analysis": "A professional executive summary of the project quality, risks, and potential."
-    }
-    `;
+    return `Analyze the whitepaper and project viability for contract: ${address}. Focus on tokenomics, utility, and red flags. Return JSON format.`;
   }
 
   if (type === 'roast') {
