@@ -4,7 +4,6 @@
 
 Sentinel is a next-generation security command center for the crypto ecosystem. It combines real-time blockchain data with advanced AI agents to detect vulnerabilities, analyze wallet behaviors, and visualize on-chain activity.
 
-![Sentinel Dashboard](https://github.com/user-attachments/assets/placeholder-image-url)
 
 ## 🚀 Key Features
 
