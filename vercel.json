@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd sentinel-dashboard && npm ci && npm run build",
+  "devCommand": "cd sentinel-dashboard && npm run dev",
+  "installCommand": "cd sentinel-dashboard && npm ci",
+  "framework": "nextjs",
+  "outputDirectory": "sentinel-dashboard/.next",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "regions": ["iad1"],
+  "github": {
+    "silent": true
+  }
+}
