@@ -83,10 +83,22 @@ This repository is a **Monorepo** containing the full stack of the Sentinel Plat
 
 ### Frontend (Next.js)
 
-#### Deploy to Vercel
-1. Go to `sentinel-dashboard/`.
-2. Run `npm run build`.
-3. Deploy the `.next` output or connect repository to Vercel (Root Directory: `sentinel-dashboard`).
+#### Deploy to Vercel (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/krsnmlna1/sentinel-dashboard)
+
+1. **One-Click Deploy**: Click the button above to deploy to Vercel
+2. **Manual Setup**: 
+   - Connect your repository to Vercel
+   - Configure environment variables:
+     - `ETHERSCAN_API_KEY` - Your Etherscan API key
+     - `GROQ_API_KEY` - Your Groq API key for AI features
+   - The `vercel.json` configuration handles the monorepo structure automatically
+3. **Build Configuration**: The project is pre-configured with:
+   - Build Command: `cd sentinel-dashboard && npm ci && npm run build`
+   - Output Directory: `sentinel-dashboard/.next`
+   - Framework: Next.js (auto-detected)
+
+For detailed Vercel deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)
 
 #### Deploy to Railway
 1. **Connect your repository** to Railway
@@ -99,7 +111,9 @@ This repository is a **Monorepo** containing the full stack of the Sentinel Plat
    - Build the Next.js app with `npm run build`
    - Start the server with `npm start`
 
-**Note**: The monorepo structure is handled automatically. Railway runs from the root directory and executes the scripts that navigate to `sentinel-dashboard/`.
+For detailed Railway deployment instructions, see [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)
+
+**Note**: The monorepo structure is handled automatically. Both platforms run from the root directory and execute the scripts that navigate to `sentinel-dashboard/`.
 
 ### Backend (Cloudflare)
 

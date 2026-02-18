@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd sentinel-dashboard && npm ci && npm run build",
+  "devCommand": "cd sentinel-dashboard && npm run dev",
+  "installCommand": "cd sentinel-dashboard && npm ci",
+  "framework": "nextjs",
+  "outputDirectory": "sentinel-dashboard/.next",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "regions": ["iad1"],
+  "github": {
+    "silent": true
+  },
+  "env": {
+    "ETHERSCAN_API_KEY": "@etherscan-api-key",
+    "GROQ_API_KEY": "@groq-api-key"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}
