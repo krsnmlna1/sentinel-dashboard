@@ -4,6 +4,12 @@
 
 Sentinel is a next-generation security command center for the crypto ecosystem. It combines real-time blockchain data with advanced AI agents to detect vulnerabilities, analyze wallet behaviors, and visualize on-chain activity.
 
+## 🌐 Live Demo
+
+**[🚀 Try Sentinel Now →](https://sentinel-dashboard.vercel.app)**
+
+Experience the full platform with one click - no installation required!
+
 
 ## 🚀 Key Features
 
