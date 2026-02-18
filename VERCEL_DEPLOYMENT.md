@@ -25,10 +25,19 @@ This repository uses a monorepo structure with:
    - **Install Command:** `cd sentinel-dashboard && npm ci` (auto-configured via vercel.json)
 
 3. **Environment Variables:**
-   Add the following environment variables in Vercel project settings:
-   - `ETHERSCAN_API_KEY` - Your Etherscan API key
-   - `GROQ_API_KEY` - Your GROQ API key
-   - Any other environment variables from `.env.example`
+   Add the following environment variables in Vercel project settings (Settings → Environment Variables):
+   
+   | Variable Name | Description | Required |
+   |---------------|-------------|----------|
+   | `ETHERSCAN_API_KEY` | Your Etherscan API key for blockchain data | Yes |
+   | `GROQ_API_KEY` | Your GROQ API key for AI features | Yes |
+   
+   **Note:** These can be added during the initial deployment or later in the project settings.
+   
+   For secret values, you can also use Vercel's Environment Variable secrets:
+   - In your Vercel project settings, go to Settings → Environment Variables
+   - Create secrets named `etherscan-api-key` and `groq-api-key`
+   - The `vercel.json` file references these using the `@` prefix
 
 4. **Deploy:**
    - Click "Deploy"
@@ -90,7 +99,23 @@ npm install
 npm run deploy
 ```
 
-Refer to Cloudflare Workers documentation for detailed deployment instructions.
+### Connecting Frontend to Backend
+
+After deploying the backend to Cloudflare Workers, you'll need to:
+
+1. **Get your Worker URL** from the Cloudflare dashboard (e.g., `https://sentinel-api.your-subdomain.workers.dev`)
+
+2. **Add the backend URL as an environment variable** in Vercel:
+   - Go to your Vercel project settings
+   - Add environment variable: `NEXT_PUBLIC_API_URL` with your Worker URL
+   - Redeploy your frontend
+
+3. **Update API calls** in the frontend to use the environment variable:
+   ```typescript
+   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+   ```
+
+Refer to [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/) for detailed deployment instructions.
 
 ## Local Development
 

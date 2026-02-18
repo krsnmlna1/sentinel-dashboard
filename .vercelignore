@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output
+.next
+dist
+build
+out
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+
+# Git
+.git
+.gitignore
+
+# Backend (not needed for frontend deployment)
+sentinel-workers
+
+# Documentation (if you want to exclude it)
+# *.md
+
+# Other platform configs
+railway.json
+railway.toml
+nixpacks.toml
+RAILWAY_DEPLOYMENT.md
