@@ -1,53 +1,44 @@
 # 🛡️ Sentinel Platform
 
-**AI-Powered Crypto Security & Wallet Profiler**
+**AI-Powered Crypto Security Dashboard**
 
-Sentinel is a next-generation security command center for the crypto ecosystem. It combines real-time blockchain data with advanced AI agents to detect vulnerabilities, analyze wallet behaviors, and visualize on-chain activity.
+Sentinel is a full-stack security command center for the crypto ecosystem. It combines real-time on-chain data with AI to audit smart contracts, profile wallets, monitor DeFi protocols, and scan project whitepapers for red flags.
 
 ## 🌐 Live Demo
 
 **[🚀 Try Sentinel Now →](https://sentinel-dashboard.vercel.app)**
 
-Experience the full platform with one click - no installation required!
+---
 
+## 🚀 Features
 
-## 🚀 Key Features
+### Command Dashboard
+Real-time overview of DeFi protocol health. Displays market sentiment, whale activity, social volume, and a live feed of on-chain events.
 
-### 1. 🧠 AI Smart Contract Audit
+### Smart Contract & Wallet Auditor
+Paste a contract address or wallet address to receive an AI-generated security report including risk scoring, honeypot detection, reentrancy analysis, and ownership pattern checks.
 
-- **Instant Analysis**: Paste any contract address to get a security breakdown.
-- **Risk Scoring**: 0-100 safety score based on code patterns (Honeypot, Reentrancy, Ownership).
-- **Yield Prediction**: For DeFi vaults, AI predicts potential APY sustainability across different market conditions.
+### Scout Network
+Autonomous protocol discovery engine backed by DeFiLlama data. Displays a radar visualization of monitored protocols ranked by TVL and risk score. Supports search by protocol name or chain.
 
-### 2. 🤡 Wallet Profiler & Roast
+### AI Terminal
+A terminal-style chat interface powered by a large language model. Ask anything about on-chain data, protocols, or security concepts.
 
-- **Behavioral Analysis**: Scans transaction history to profile a wallet (Whale, Degen, Bot, or Noob).
-- **Savage Mode**: Generates a "Roast" of the wallet's trading performance using AI.
-- **Viral Export**: One-click generation of shareable "Proof-of-Roast" images for Twitter/X.
-
-### 3. 📡 Scout Radar
-
-- **3D Visualization**: Real-time visualization of blockchain nodes and interactions.
-- **Visual Intelligence**: Identify clusters of suspicious activity or whale movements visually.
-
-### 4. 📄 Whitepaper Scanner
-
-- **PDF Analysis**: Upload project whitepapers to detect red flags, vague tokenomics, and unrealistic promises.
+### Whitepaper Scanner
+Upload a project whitepaper (PDF) to detect red flags such as vague tokenomics, unrealistic promises, and missing technical detail.
 
 ---
 
-## 🏗️ Monorepo Architecture
+## 🏗️ Architecture
 
-This repository is a **Monorepo** containing the full stack of the Sentinel Platform.
+This is a **monorepo** with two packages:
 
-- **`sentinel-dashboard/`** (Frontend)
-  - Built with [Next.js 14](https://nextjs.org/) (App Router).
-  - Handles UI, Wallet Connection, and Data Visualization.
-  - Deployed on Vercel/Netlify.
-- **`sentinel-workers/`** (Backend)
-  - Built with [Cloudflare Workers](https://workers.cloudflare.com/).
-  - Handles AI Inference (Llama 3 via Groq), Database (KV), and Blockchain Parsing.
-  - Deployed on Cloudflare Edge Network.
+| Package | Description | Stack |
+|---|---|---|
+| `sentinel-dashboard/` | Frontend application | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Framer Motion |
+| `sentinel-workers/` | Backend API | Cloudflare Workers, Cloudflare KV |
+
+The backend handles audit job queuing and result storage via Cloudflare KV. The frontend calls both the backend API and Next.js API routes (Etherscan, DeFiLlama, Groq).
 
 ---
 
@@ -56,87 +47,77 @@ This repository is a **Monorepo** containing the full stack of the Sentinel Plat
 ### Prerequisites
 
 - Node.js 18+
-- NPM or Bun
+- npm
 
-### Installation
+### Setup
 
-1.  **Clone the repository**
+1. Clone the repository:
 
-    ```bash
-    git clone https://github.com/krsnmlna1/sentinel-dashboard.git
-    cd sentinel-dashboard
-    ```
+   ```bash
+   git clone https://github.com/krsnmlna1/sentinel-dashboard.git
+   cd sentinel-dashboard
+   ```
 
-2.  **Install Frontend Dependencies**
+2. Copy the environment file and fill in your API keys:
 
-    ```bash
-    cd sentinel-dashboard
-    npm install
-    ```
+   ```bash
+   cp .env.example .env
+   ```
 
-3.  **Run Development Server**
+   | Variable | Required | Description |
+   |---|---|---|
+   | `ETHERSCAN_API_KEY` | Yes | Etherscan API key for on-chain data |
+   | `GROQ_API_KEY` | Yes | Groq API key for AI features |
+   | `NEXT_PUBLIC_API_URL` | No | URL of the deployed Cloudflare Worker (defaults to `http://localhost:8787`) |
 
-    ```bash
-    npm run dev
-    ```
+3. Install dependencies and start the frontend:
 
-4.  **Open in Browser**
-    Visit `http://localhost:3000`
+   ```bash
+   cd sentinel-dashboard
+   npm install
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🌍 Deployment Setup
+## 🌍 Deployment
 
-### Frontend (Next.js)
+### Frontend
 
-#### Deploy to Vercel (Recommended)
+#### Vercel (Recommended)
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/krsnmlna1/sentinel-dashboard)
 
-1. **One-Click Deploy**: Click the button above to deploy to Vercel
-2. **Manual Setup**: 
-   - Connect your repository to Vercel
-   - Configure environment variables:
-     - `ETHERSCAN_API_KEY` - Your Etherscan API key
-     - `GROQ_API_KEY` - Your Groq API key for AI features
-   - The `vercel.json` configuration handles the monorepo structure automatically
-3. **Build Configuration**: The project is pre-configured with:
-   - Build Command: `cd sentinel-dashboard && npm ci && npm run build`
-   - Output Directory: `sentinel-dashboard/.next`
-   - Framework: Next.js (auto-detected)
+The `vercel.json` file handles the monorepo structure automatically. Set `ETHERSCAN_API_KEY` and `GROQ_API_KEY` in the Vercel dashboard environment variables.
 
-For detailed Vercel deployment instructions, see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)
+For detailed instructions see [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md).
 
-#### Deploy to Railway
-1. **Connect your repository** to Railway
-2. **Set environment variables** in Railway dashboard:
-   - `ETHERSCAN_API_KEY` - Your Etherscan API key
-   - `GROQ_API_KEY` - Your Groq API key for AI features
-3. Railway will automatically detect the configuration from `railway.json` / `nixpacks.toml`
-4. The deployment will:
-   - Install dependencies with `npm ci`
-   - Build the Next.js app with `npm run build`
-   - Start the server with `npm start`
+#### Railway
 
-For detailed Railway deployment instructions, see [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md)
+Connect the repository to Railway. The `railway.json` and `nixpacks.toml` files configure the build and start commands automatically. Set `ETHERSCAN_API_KEY` and `GROQ_API_KEY` as environment variables in the Railway dashboard.
 
-**Note**: The monorepo structure is handled automatically. Both platforms run from the root directory and execute the scripts that navigate to `sentinel-dashboard/`.
+For detailed instructions see [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md).
 
-### Backend (Cloudflare)
+### Backend (Cloudflare Workers)
 
-1. Go to `sentinel-workers/`.
-2. Configure `wrangler.toml` with your Cloudflare Account ID.
-3. Run `npx wrangler deploy`.
+1. Navigate to `sentinel-workers/`.
+2. Add your Cloudflare Account ID to `wrangler.toml`.
+3. Deploy:
+
+   ```bash
+   npx wrangler deploy
+   ```
 
 ---
 
 ## 🤝 Contributing
 
-We welcome degens, security researchers, and whiteboard warriors.
-
-1. Fork the Project
-2. Create your Feature Branch
-3. Submit a Pull Request
+1. Fork the repository.
+2. Create a feature branch.
+3. Submit a pull request.
 
 ---
 
-_Built with ❤️ (and paranoia) by the Sentinel Team._
+_Built by the Sentinel Team._
